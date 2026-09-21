@@ -1,0 +1,12 @@
+.git
+.github
+.nuxt
+.output
+node_modules
+.env
+.env.*
+!.env.example
+*.log
+docs
+supabase
+tests

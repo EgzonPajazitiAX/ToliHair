@@ -1,10 +1,16 @@
 // Check again at server startup: production environment overrides can differ from build.
 export default defineNitroPlugin(() => {
-  const config = useRuntimeConfig()
-  const key = config.public.supabasePublishableKey
+  const config = serverEnvironment()
+  const key = config.supabasePublishableKey
   if (process.env.NODE_ENV === 'production') {
-    if (!config.public.supabaseUrl || !key || !config.supabaseSecretKey || !config.appOrigin) {
-      throw new Error('Production configuration is incomplete. Refusing to start.')
+    const missing = [
+      !config.supabaseUrl && 'NUXT_PUBLIC_SUPABASE_URL',
+      !key && 'NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+      !config.supabaseSecretKey && 'NUXT_SUPABASE_SECRET_KEY',
+      !config.appOrigin && 'NUXT_APP_ORIGIN',
+    ].filter(Boolean)
+    if (missing.length) {
+      throw new Error(`Production configuration is incomplete. Missing: ${missing.join(', ')}.`)
     }
     const origin = new URL(config.appOrigin)
     if (origin.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(origin.hostname)) {

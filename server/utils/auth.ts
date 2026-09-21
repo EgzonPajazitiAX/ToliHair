@@ -5,12 +5,12 @@ import type { StaffIdentity } from '../../shared/types/auth'
 
 export function sessionClient(event: H3Event) {
   if (event.context.sessionClient) return event.context.sessionClient
-  const config = useRuntimeConfig(event)
-  if (!config.public.supabaseUrl || !config.public.supabasePublishableKey) {
+  const config = serverEnvironment(event)
+  if (!config.supabaseUrl || !config.supabasePublishableKey) {
     throw createError({ statusCode: 503, statusMessage: 'Hyrja e stafit nuk është konfiguruar' })
   }
   const jar = new Map(Object.entries(parseCookies(event)))
-  const client = createServerClient<Database>(config.public.supabaseUrl, config.public.supabasePublishableKey, {
+  const client = createServerClient<Database>(config.supabaseUrl, config.supabasePublishableKey, {
     cookieOptions: { name: 'toli-staff', httpOnly: true, secure: !import.meta.dev, sameSite: 'lax', path: '/' },
     cookies: {
       getAll: () => Array.from(jar, ([name, value]) => ({ name, value })),

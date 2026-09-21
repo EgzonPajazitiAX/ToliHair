@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../types/database.types'
 
 function connection() {
-  const config = useRuntimeConfig()
-  if (!config.public.supabaseUrl) {
+  const config = serverEnvironment()
+  if (!config.supabaseUrl) {
     throw createError({ statusCode: 503, statusMessage: 'Lidhja me bazën e të dhënave nuk është konfiguruar' })
   }
   return config
@@ -12,10 +12,10 @@ function connection() {
 // No implicit session singleton. Staff requests will use their verified JWT in Phase 4.
 export function createPublicSupabaseClient() {
   const config = connection()
-  if (!config.public.supabasePublishableKey) {
+  if (!config.supabasePublishableKey) {
     throw createError({ statusCode: 503, statusMessage: 'Lidhja me bazën e të dhënave nuk është konfiguruar' })
   }
-  return createClient<Database>(config.public.supabaseUrl, config.public.supabasePublishableKey, {
+  return createClient<Database>(config.supabaseUrl, config.supabasePublishableKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   })
 }
@@ -26,7 +26,7 @@ export function createPrivilegedSupabaseClient() {
   if (!config.supabaseSecretKey) {
     throw createError({ statusCode: 503, statusMessage: 'Qasja e privilegjuar në bazën e të dhënave nuk është konfiguruar' })
   }
-  return createClient<Database>(config.public.supabaseUrl, config.supabaseSecretKey, {
+  return createClient<Database>(config.supabaseUrl, config.supabaseSecretKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   })
 }

@@ -20,14 +20,14 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   ui: { fonts: false, colorMode: false },
   runtimeConfig: {
-    appOrigin: process.env.APP_ORIGIN || '',
+    appOrigin: process.env.NUXT_APP_ORIGIN || process.env.APP_ORIGIN || '',
     // Private: never move this into public runtime config.
-    supabaseSecretKey: process.env.SUPABASE_SECRET_KEY || '',
+    supabaseSecretKey: process.env.NUXT_SUPABASE_SECRET_KEY || process.env.SUPABASE_SECRET_KEY || '',
     public: {
       siteName: 'Toli Hair',
-      supabaseUrl: process.env.SUPABASE_URL || '',
+      supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',
       // Accept only a public key here; validated before Nuxt starts below.
-      supabasePublishableKey: process.env.SUPABASE_KEY || '',
+      supabasePublishableKey: process.env.NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_KEY || '',
     },
   },
   app: {

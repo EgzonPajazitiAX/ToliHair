@@ -21,6 +21,7 @@ export const availabilityQuerySchema = z.object({
 })).pipe(z.object({ serviceIds: selectedServices, date: localDate, barberId: uuid.optional() }))
 
 export const guestBookingSchema = z.object({
+  expectedPriceMinor: z.number().int().min(0).max(2147483647).optional(),
   idempotencyKey: uuid,
   serviceIds: selectedServices.optional(),
   serviceId: uuid.optional(),
@@ -33,7 +34,10 @@ export const guestBookingSchema = z.object({
   barberId: value.barberId,
   startsAt: value.startsAt,
   customer: value.customer,
+  expectedPriceMinor: value.expectedPriceMinor,
 }))
+
+export const startTimesQuerySchema = z.object({ date: localDate, barberId: uuid }).strict()
 
 export const receiptSchema = z.object({ token: uuid }).strict()
 export const bookingStatusSchema = z.object({ enabled: z.boolean(), revision: z.number().int().positive() }).strict()

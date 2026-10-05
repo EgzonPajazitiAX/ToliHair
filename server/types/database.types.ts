@@ -323,6 +323,10 @@ export type Database = {
       }
       shop_settings: {
         Row: {
+          peak_pricing_enabled: boolean
+          peak_start_time: string
+          peak_end_time: string
+          peak_multiplier: number
           address: string | null
           booking_enabled: boolean
           booking_horizon_days: number
@@ -340,6 +344,10 @@ export type Database = {
         Insert: {
           address?: string | null
           booking_enabled?: boolean
+          peak_pricing_enabled?: boolean
+          peak_start_time?: string
+          peak_end_time?: string
+          peak_multiplier?: number
           booking_horizon_days?: number
           created_at?: string
           currency?: string | null
@@ -355,6 +363,10 @@ export type Database = {
         Update: {
           address?: string | null
           booking_enabled?: boolean
+          peak_pricing_enabled?: boolean
+          peak_start_time?: string
+          peak_end_time?: string
+          peak_multiplier?: number
           booking_horizon_days?: number
           created_at?: string
           currency?: string | null
@@ -412,6 +424,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_booking_start_slots: {
+        Args: { p_date: string, p_barber: string }
+        Returns: { slot_start: string, local_time: string, barber_id: string, barber_name: string, service_ids: string[] }[]
+      }
+      create_guest_booking_priced: {
+        Args: { p_key: string, p_barber: string, p_services: string[], p_start: string, p_name: string, p_phone: string, p_email?: string, p_expected_price?: number }
+        Returns: Json
+      }
       create_guest_appointment: {
         Args: {
           p_barber: string

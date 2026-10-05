@@ -11,7 +11,7 @@ export async function loadManagement(client: SupabaseClient<Database>): Promise<
     client.from('barber_services').select('barber_id,service_id'),
     client.from('working_hours').select('id,barber_id,weekday,start_time,end_time').order('weekday').order('start_time'),
     client.from('blocked_times').select('id,revision,barber_id,starts_at,ends_at,reason').order('starts_at'),
-    client.from('shop_settings').select('revision,name,phone,address,timezone,currency,slot_interval_minutes,minimum_notice_minutes,booking_horizon_days,booking_enabled').eq('id', true).single(),
+    client.from('shop_settings').select('revision,name,phone,address,timezone,currency,slot_interval_minutes,minimum_notice_minutes,booking_horizon_days,booking_enabled,peak_pricing_enabled,peak_start_time,peak_end_time,peak_multiplier').eq('id', true).single(),
   ] as const)
   for (const result of results) if (result.error) managementError(result.error)
   return { services: results[0].data!, barbers: results[1].data!, assignments: results[2].data!, hours: results[3].data!, blocks: results[4].data!, settings: results[5].data! }

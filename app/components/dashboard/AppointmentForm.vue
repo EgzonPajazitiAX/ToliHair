@@ -3,9 +3,10 @@ import type { AppointmentData, AppointmentRecord } from '#shared/types/appointme
 import type { AvailabilitySlot } from '#shared/types/booking'
 import { customerSchema } from '#shared/schemas/customer'
 
-const props = defineProps<{ data: AppointmentData, appointment?: AppointmentRecord | null }>()
-const emit = defineEmits<{ saved: [], cancel: [] }>()
+const props = defineProps<{ data: AppointmentData, appointment?: AppointmentRecord | null, embedded?: boolean }>()
+const emit = defineEmits<{ saved: [], cancel: [], savingChange: [value: boolean] }>()
 const saving = ref(false)
+watch(saving, value => emit('savingChange', value), { flush: 'sync' })
 const loadingSlots = ref(false)
 const message = ref('')
 const slots = ref<AvailabilitySlot[]>([])
@@ -93,8 +94,8 @@ watch(() => props.appointment, reset, { immediate: true })
 </script>
 
 <template>
-  <UCard>
-    <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+  <UCard :ui="embedded ? { root: 'ring-0 shadow-none rounded-none bg-transparent', body: 'p-0 sm:p-0' } : undefined">
+    <div v-if="!embedded" class="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div><p class="eyebrow text-primary">{{ appointment ? 'Ndryshim' : 'Termin i ri' }}</p><h2 class="mt-2 font-display text-3xl">{{ appointment ? 'Ndrysho termin' : 'Krijo termin manualisht' }}</h2></div>
       <UButton type="button" color="neutral" variant="ghost" :disabled="saving" @click="emit('cancel')">Mbyll</UButton>
     </div>
@@ -103,15 +104,18 @@ watch(() => props.appointment, reset, { immediate: true })
       <UFormField label="Shërbimi"><USelect :model-value="form.serviceId || undefined" required class="w-full" :disabled="saving" :items="services.map(service => ({ label: service.name, value: service.id }))" placeholder="Zgjidh shërbimin" @update:model-value="form.serviceId = $event || ''; serviceChanged()" /></UFormField>
       <UFormField label="Berberi"><USelect :model-value="form.barberId || undefined" required class="w-full" :disabled="saving || !form.serviceId" :items="barbers.map(barber => ({ label: barber.name, value: barber.id }))" placeholder="Zgjidh berberin" @update:model-value="form.barberId = $event || ''; selectionChanged()" /></UFormField>
       <UFormField label="Data"><UInput v-model="form.date" type="date" required class="w-full" :disabled="saving || !form.barberId" :min="localDateInZone(data.timezone)" @change="selectionChanged" /></UFormField>
-      <div class="field"><span>Ora e lirë</span><div class="min-h-11 rounded-lg border border-default p-2"><span v-if="loadingSlots" class="text-sm text-muted">Po ngarkohen…</span><span v-else-if="form.date && !slots.length" class="text-sm text-muted">Nuk ka orare të lira.</span><div v-else class="flex flex-wrap gap-2"><UButton v-for="slot in slots" :key="slot.startsAt" color="neutral" variant="ghost" type="button" class="rounded-lg border px-3 py-2 text-sm font-medium" :class="form.startsAt === slot.startsAt ? 'border-primary bg-primary text-white' : 'border-default'" :aria-pressed="form.startsAt === slot.startsAt" @click="form.startsAt = slot.startsAt">{{ slot.localTime }}</UButton></div></div></div>
+      <div class="field"><span>Ora e lirë</span><div class="slot-options min-h-11 rounded-lg border border-default p-2"><span v-if="loadingSlots" class="text-sm text-muted">Po ngarkohen…</span><span v-else-if="form.date && !slots.length" class="text-sm text-muted">Nuk ka orare të lira.</span><div v-else class="flex flex-wrap gap-2"><UButton v-for="slot in slots" :key="slot.startsAt" color="neutral" variant="ghost" type="button" class="rounded-lg border px-3 py-2 text-sm font-medium" :class="form.startsAt === slot.startsAt ? 'border-primary bg-primary text-white' : 'border-default'" :aria-pressed="form.startsAt === slot.startsAt" :disabled="saving" @click="form.startsAt = slot.startsAt">{{ slot.localTime }}</UButton></div></div></div>
       <UFormField label="Emri dhe mbiemri" class="sm:col-span-2"><UInput v-model="form.customer.fullName" required maxlength="120" autocomplete="name" class="w-full" /></UFormField>
       <UFormField label="Telefoni"><UInput v-model="form.customer.phone" required maxlength="30" type="tel" autocomplete="tel" class="w-full" placeholder="+383 44 123 456" /></UFormField>
       <UFormField label="Emaili (opsional)"><UInput v-model="form.customer.email" maxlength="254" type="email" autocomplete="email" class="w-full" placeholder="emri@shembull.com" /></UFormField>
-      <div class="flex flex-wrap gap-3 sm:col-span-2"><UButton type="submit" size="lg" :loading="saving" :disabled="saving">{{ appointment ? 'Ruaj ndryshimet' : 'Krijo termin' }}</UButton><UButton type="button" color="neutral" variant="outline" size="lg" :disabled="saving" @click="emit('cancel')">Anulo</UButton></div>
+      <div class="form-actions flex flex-wrap gap-3 sm:col-span-2"><UButton type="submit" size="lg" :loading="saving" :disabled="saving">{{ appointment ? 'Ruaj ndryshimet' : 'Krijo termin' }}</UButton><UButton type="button" color="neutral" variant="outline" size="lg" :disabled="saving" @click="emit('cancel')">Anulo</UButton></div>
     </form>
   </UCard>
 </template>
 
 <style scoped>
 .field { display:flex; flex-direction:column; gap:.5rem; font-size:.875rem; font-weight:500; }
+.slot-options { max-height:12rem; overflow-y:auto; overscroll-behavior:contain; }
+.form-actions { border-top:1px solid var(--ui-border); padding-top:1.25rem; }
+@media(max-width:639px) { .form-actions > :first-child { flex:1; justify-content:center; } }
 </style>

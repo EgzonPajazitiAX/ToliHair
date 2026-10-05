@@ -1,4 +1,5 @@
 import type { AvailabilitySlot, BookingCatalog, BookingReceipt } from '#shared/types/booking'
+import { adjustedPrice, multiplierAtTime } from '#shared/utils/pricing'
 
 function dateInZone(timezone: string) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
@@ -36,11 +37,13 @@ export function useBooking() {
   const barbers = computed(() => catalog.value?.barbers || [])
   const selectedBarber = computed(() => catalog.value?.barbers.find(item => item.id === barberId.value))
   const availableServices = computed(() => selectedBarber.value
-    ? catalog.value?.services.filter(item => selectedBarber.value!.service_ids.includes(item.id)) || []
+    ? catalog.value?.services.filter(item => selectedBarber.value!.service_ids.includes(item.id) && (!slot.value?.serviceIds || slot.value.serviceIds.includes(item.id))) || []
     : [])
   const selectedServices = computed(() => catalog.value?.services.filter(item => serviceIds.value.includes(item.id)) || [])
   const totalDuration = computed(() => selectedServices.value.reduce((total, item) => total + item.duration_minutes, 0))
-  const totalPrice = computed(() => selectedServices.value.reduce((total, item) => total + item.price_minor, 0))
+  const priceMultiplier = computed(() => multiplierAtTime(catalog.value?.shop, slot.value?.localTime || ''))
+  const servicePrice = (priceMinor: number) => adjustedPrice(priceMinor, priceMultiplier.value)
+  const totalPrice = computed(() => selectedServices.value.reduce((total, item) => total + servicePrice(item.price_minor), 0))
   const barber = selectedBarber
   const timezone = computed(() => catalog.value?.shop.timezone || 'Europe/Belgrade')
   const minimumDate = computed(() => dateInZone(timezone.value))
@@ -59,13 +62,29 @@ export function useBooking() {
       return
     }
     serviceIds.value = selected
-    date.value = ''; slot.value = null; slots.value = []; message.value = ''
+    message.value = ''
   }
 
-  function continueFromServices() {
+  async function continueFromServices() {
     if (!barber.value) { message.value = 'Zgjidhni së pari berberin.'; step.value = 1; return }
     if (!serviceIds.value.length) { message.value = 'Zgjidhni së paku një shërbim.'; return }
-    step.value = 3
+    if (!slot.value || !date.value) { message.value = 'Zgjidhni së pari datën dhe orën.'; step.value = 2; return }
+    if (loadingSlots.value) return
+    const selectedSlot = slot.value
+    const requestId = ++availabilityRequest
+    loadingSlots.value = true
+    message.value = ''
+    try {
+      const result = await $fetch<{ slots: AvailabilitySlot[] }>('/api/booking/availability', { query: { serviceIds: serviceIds.value.join(','), barberId: barberId.value, date: date.value } })
+      if (requestId !== availabilityRequest) return
+      if (!result.slots.some(item => item.barberId === selectedSlot.barberId && Date.parse(item.startsAt) === Date.parse(selectedSlot.startsAt))) {
+        message.value = 'Koha e lirë në këtë orar nuk mjafton për shërbimet e zgjedhura. Hiq një shërbim ose zgjidh një orar tjetër.'
+        return
+      }
+      step.value = 4
+    }
+    catch (error) { if (requestId === availabilityRequest) message.value = failureMessage(error, 'Orari nuk mund të kontrollohej. Provoni përsëri.') }
+    finally { if (requestId === availabilityRequest) loadingSlots.value = false }
   }
 
   function chooseBarber(id: string) {
@@ -76,10 +95,10 @@ export function useBooking() {
   async function loadSlots() {
     const requestId = ++availabilityRequest
     slot.value = null; slots.value = []; message.value = ''
-    if (!serviceIds.value.length || !barberId.value || !date.value) return
+    if (!barberId.value || !date.value) return
     loadingSlots.value = true
     try {
-      const result = await $fetch<{ slots: AvailabilitySlot[] }>('/api/booking/availability', { query: { serviceIds: serviceIds.value.join(','), barberId: barberId.value, date: date.value } })
+      const result = await $fetch<{ slots: AvailabilitySlot[] }>('/api/booking/start-times', { query: { barberId: barberId.value, date: date.value } })
       if (requestId === availabilityRequest) slots.value = result.slots
     }
     catch (error) { if (requestId === availabilityRequest) message.value = failureMessage(error, 'Oraret nuk mund të ngarkoheshin. Ju lutemi provoni përsëri.') }
@@ -94,7 +113,7 @@ export function useBooking() {
       const result = await $fetch<{ receipt: BookingReceipt }>('/api/booking', {
         method: 'POST', headers: { 'x-toli-request': '1' },
         timeout: 20_000,
-        body: { idempotencyKey: idempotencyKey.value, serviceIds: serviceIds.value, barberId: barberId.value, startsAt: slot.value.startsAt, customer },
+        body: { idempotencyKey: idempotencyKey.value, serviceIds: serviceIds.value, barberId: barberId.value, startsAt: slot.value.startsAt, customer, expectedPriceMinor: totalPrice.value },
       })
       const receipt = useState<BookingReceipt | null>('booking-receipt', () => null)
       receipt.value = result.receipt
@@ -107,14 +126,21 @@ export function useBooking() {
       const errorMessage = failureMessage(error, 'Rezervimi nuk mund të përfundonte. Ju lutemi provoni përsëri.')
       if (status === 409) {
         idempotencyKey.value = ''
-        await loadSlots()
+        const reason = (error as { data?: { data?: { reason?: string } } }).data?.data?.reason
+        if (reason === 'price_changed') {
+          await catalogRequest.refresh()
+          step.value = 3
+        }
+        else {
+          await loadSlots()
+          step.value = 2
+        }
         message.value = errorMessage
-        step.value = 3
       }
       else message.value = errorMessage
     }
     finally { submitting.value = false }
   }
 
-  return { ...catalogRequest, catalog, step, serviceIds, barberId, date, slot, slots, loadingSlots, submitting, message, customer, availableServices, selectedServices, totalDuration, totalPrice, barbers, barber, timezone, minimumDate, maximumDate, toggleService, continueFromServices, chooseBarber, loadSlots, confirm }
+  return { ...catalogRequest, catalog, step, serviceIds, barberId, date, slot, slots, loadingSlots, submitting, message, customer, availableServices, selectedServices, totalDuration, totalPrice, priceMultiplier, servicePrice, barbers, barber, timezone, minimumDate, maximumDate, toggleService, continueFromServices, chooseBarber, loadSlots, confirm }
 }

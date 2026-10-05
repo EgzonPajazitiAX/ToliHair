@@ -11,7 +11,7 @@ const open = ref(false)
 const selectedBarber = ref('')
 const deleting = ref<BlockRecord | null>(null)
 const form = reactive({ id: undefined as string | undefined, revision: undefined as number | undefined, name: '', description: '', duration_minutes: 30, price: '', is_active: true, bio: '', service_ids: [] as string[], barber_id: '', start_local: '', end_local: '', reason: '' })
-const settings = reactive({ revision: 1, name: '', phone: '', address: '', timezone: '', currency: '', slot_interval_minutes: 15, minimum_notice_minutes: 60, booking_horizon_days: 60, booking_enabled: false })
+const settings = reactive({ revision: 1, name: '', phone: '', address: '', timezone: '', currency: '', slot_interval_minutes: 15, minimum_notice_minutes: 60, booking_horizon_days: 60, booking_enabled: false, peak_pricing_enabled: false, peak_start_time: '17:00', peak_end_time: '20:00', peak_multiplier: 1.5 })
 const intervals = ref<{ weekday: number, start_time: string, end_time: string }[]>([])
 const hoursRevision = ref(0)
 const days = ['E hënë', 'E martë', 'E mërkurë', 'E enjte', 'E premte', 'E shtunë', 'E diel']
@@ -116,7 +116,7 @@ async function submitHours() {
 watch(selectedBarber, loadHours)
 watch(data, value => {
   if (!value) return
-  Object.assign(settings, { ...value.settings, phone: value.settings.phone || '', address: value.settings.address || '', timezone: value.settings.timezone || '', currency: value.settings.currency || '' })
+  Object.assign(settings, { ...value.settings, phone: value.settings.phone || '', address: value.settings.address || '', timezone: value.settings.timezone || '', currency: value.settings.currency || '', peak_start_time: value.settings.peak_start_time?.slice(0, 5) || '17:00', peak_end_time: value.settings.peak_end_time?.slice(0, 5) || '20:00' })
   if (!selectedBarber.value) selectedBarber.value = value.barbers[0]?.id || ''
   loadHours()
 })
@@ -133,7 +133,7 @@ async function submit() {
   if (await save(payload)) open.value = false
 }
 async function submitSettings() {
-  await save({ revision: settings.revision, name: settings.name, phone: settings.phone, address: settings.address, slot_interval_minutes: Number(settings.slot_interval_minutes), minimum_notice_minutes: Number(settings.minimum_notice_minutes), booking_horizon_days: Number(settings.booking_horizon_days) })
+  await save({ revision: settings.revision, name: settings.name, phone: settings.phone, address: settings.address, slot_interval_minutes: Number(settings.slot_interval_minutes), minimum_notice_minutes: Number(settings.minimum_notice_minutes), booking_horizon_days: Number(settings.booking_horizon_days), peak_pricing_enabled: settings.peak_pricing_enabled, peak_start_time: settings.peak_start_time, peak_end_time: settings.peak_end_time, peak_multiplier: Number(settings.peak_multiplier) })
 }
 async function toggleBooking() {
   if (saving.value) return
@@ -261,6 +261,16 @@ async function removeBlock() {
             <UFormField label="Intervali i termineve (minuta)"><UInput v-model.number="settings.slot_interval_minutes" type="number" required min="5" max="120" step="1" class="w-full" /></UFormField>
             <UFormField label="Njoftimi minimal (minuta)"><UInput v-model.number="settings.minimum_notice_minutes" type="number" required min="0" max="10080" step="1" class="w-full" /></UFormField>
             <UFormField label="Rezervim deri në (ditë përpara)"><UInput v-model.number="settings.booking_horizon_days" type="number" required min="1" max="365" step="1" class="w-full" /></UFormField>
+          </fieldset>
+          <fieldset :disabled="saving" class="rounded-xl border border-default bg-elevated/50 p-4 sm:p-5">
+            <div class="flex flex-wrap items-start justify-between gap-4"><div><h2 class="text-lg font-semibold">Çmimi sipas orarit</h2><p class="mt-1 max-w-xl text-sm leading-6 text-muted">Cakto një interval ditor kur shërbimet kanë çmim më të lartë. Çmimi llogaritet sipas orës së fillimit të terminit.</p></div><USwitch v-model="settings.peak_pricing_enabled" label="Aktivizo çmimin e rritur" /></div>
+            <div class="mt-5 grid gap-4 sm:grid-cols-3">
+              <UFormField label="Nga ora"><UInput v-model="settings.peak_start_time" type="time" required class="w-full" /></UFormField>
+              <UFormField label="Deri në ora"><UInput v-model="settings.peak_end_time" type="time" required class="w-full" /></UFormField>
+              <UFormField label="Shumëzuesi i çmimit" help="1.5× = 50% më shtrenjtë"><UInput v-model.number="settings.peak_multiplier" type="number" required min="1.01" max="5" step="0.01" class="w-full" /></UFormField>
+            </div>
+            <p class="mt-4 rounded-lg border border-default bg-default p-3 text-sm leading-6">{{ settings.peak_pricing_enabled ? `Çdo ditë, ${settings.peak_start_time}–${settings.peak_end_time}: +${Math.round((Number(settings.peak_multiplier) - 1) * 100)}%. Një shërbim prej 10 € kushton ${(10 * Number(settings.peak_multiplier)).toFixed(2)} €.` : 'Çmimi i rritur është i çaktivizuar. Të gjitha oraret përdorin çmimet normale.' }}</p>
+            <p class="mt-3 text-xs leading-5 text-muted">Ora e përfundimit nuk përfshihet. Çmimi rillogaritet kur ndryshohet ora ose shërbimi i një rezervimi; ndryshimi vetëm i të dhënave të klientit nuk e prek çmimin.</p>
           </fieldset>
           <p class="text-sm leading-6 text-muted">Të gjitha çmimet ruhen dhe shfaqen vetëm në euro (€).</p>
           <UButton type="submit" :loading="saving" :disabled="saving">Ruaj cilësimet</UButton>

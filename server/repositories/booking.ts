@@ -53,11 +53,17 @@ export async function createGuestBooking(client: SupabaseClient<Database>, input
     p_key: input.idempotencyKey, p_barber: input.barberId, p_start: input.startsAt,
     p_name: input.customer.fullName, p_phone: input.customer.phone, p_email: input.customer.email,
   }
-  const result = input.serviceIds.length === 1
-    ? await client.rpc('create_guest_booking', { ...common, p_service: input.serviceIds[0]! })
-    : await client.rpc('create_guest_booking_multi', { ...common, p_services: input.serviceIds })
+  const result = await client.rpc('create_guest_booking_priced', {
+    ...common, p_services: input.serviceIds, ...(input.expectedPriceMinor !== undefined ? { p_expected_price: input.expectedPriceMinor } : {}),
+  })
   if (result.error) bookingError(result.error)
   return parseReceipt(result.data)
+}
+
+export async function loadStartTimes(client: SupabaseClient<Database>, query: { date: string, barberId: string }): Promise<AvailabilitySlot[]> {
+  const result = await client.rpc('get_booking_start_slots', { p_date: query.date, p_barber: query.barberId })
+  if (result.error) bookingError(result.error)
+  return (result.data || []).map(item => ({ startsAt: item.slot_start, localTime: item.local_time, barberId: item.barber_id, barberName: item.barber_name, serviceIds: item.service_ids }))
 }
 
 export async function loadBookingReceipt(client: SupabaseClient<Database>, token: string) {

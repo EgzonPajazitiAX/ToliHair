@@ -15,6 +15,8 @@ const businessMessages: Record<string, string> = {
 }
 
 export function bookingError(error: { code?: string, message?: string }): never {
+  if (error.message === 'Booking price changed') throw createError({ statusCode: 409, statusMessage: 'Çmimi ndryshoi. Kontrolloni çmimin e përditësuar para konfirmimit.', data: { reason: 'price_changed' } })
+  if (error.code === 'PGRST202' && /get_booking_start_slots|create_guest_booking_priced/.test(error.message || '')) throw createError({ statusCode: 503, statusMessage: 'Rezervimi sipas orarit kërkon migrimin e fundit të databazës.' })
   if (error.code === 'PGRST202' && error.message?.includes('get_available_slots_multi')) {
     throw createError({ statusCode: 503, statusMessage: 'Rezervimi me disa shërbime nuk është aktivizuar ende në databazë. Aplikoni migrimet e fundit.' })
   }

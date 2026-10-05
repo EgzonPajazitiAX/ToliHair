@@ -1,4 +1,6 @@
-export interface BookingShop {
+import type { TimePricing } from '../utils/pricing'
+
+export interface BookingShop extends TimePricing {
   name: string
   phone: string | null
   address: string | null
@@ -35,6 +37,7 @@ export interface AvailabilitySlot {
   localTime: string
   barberId: string
   barberName: string
+  serviceIds?: string[]
 }
 
 export interface BookingReceipt {

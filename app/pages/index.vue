@@ -28,18 +28,18 @@ const serviceIcon = (index: number) => serviceIcons[index % serviceIcons.length]
       </div>
       <div class="shell hero-grid">
         <div class="hero-copy">
-          <div class="availability"><span /> Rezervime online, pa pritje</div>
-          <p class="eyebrow mt-8 text-brand-300">Toli Hair · Berberhane moderne</p>
+          <div class="availability font-bold"><span aria-hidden="true" /> Rezervo online, në pak hapa</div>
+          <p class="hero-eyebrow eyebrow text-brand-300">Toli Hair · Kujdeset për stilin tënd</p>
           <h1 id="hero-title">Stili yt,<br><em>i punuar me kujdes.</em></h1>
-          <p class="hero-description">Prerje precize, detaje të pastra dhe një përvojë që respekton kohën tënde. Rezervo vizitën në pak hapa.</p>
-          <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+          <p class="hero-description">Zgjidh berberin, shërbimet dhe orarin që të përshtatet. Rezervo online dhe eja në orën e caktuar.</p>
+          <div class="hero-actions flex flex-col gap-3 sm:flex-row">
             <UButton to="/booking" size="xl" trailing-icon="i-lucide-arrow-up-right" class="justify-center">Rezervo termin</UButton>
             <UButton to="/#sherbimet" size="xl" color="neutral" variant="outline" trailing-icon="i-lucide-arrow-down" class="hero-outline justify-center">Shiko shërbimet</UButton>
           </div>
           <div class="assurances">
-            <span><UIcon name="i-lucide-shield-check" /> Pa llogari</span>
-            <span><UIcon name="i-lucide-clock-3" /> Ora në kohë reale</span>
-            <span><UIcon name="i-lucide-circle-check" /> Konfirmim i menjëhershëm</span>
+            <span><UIcon name="i-lucide-user-round" class="size-4 shrink-0 text-brand-300" /> Zgjidh berberin tënd</span>
+            <span><UIcon name="i-lucide-calendar-check" class="size-4 shrink-0 text-brand-300" /> Rezervo lehtë online</span>
+            <span><UIcon name="i-lucide-scissors" class="size-4 shrink-0 text-brand-300" /> Kujdes në çdo detaj</span>
           </div>
         </div>
         <div class="hero-note"><UIcon name="i-lucide-scissors" /><span><strong>Detaji bën diferencën.</strong><small>Përkujdesje në çdo prerje.</small></span></div>
@@ -51,8 +51,8 @@ const serviceIcon = (index: number) => serviceIcons[index % serviceIcons.length]
         <div class="services-intro">
           <p class="eyebrow text-primary"><span class="services-rule" /> Shërbimet tona</p>
           <h2 id="services-title" class="display">Stili fillon<br>me <em>detajet.</em></h2>
-          <p class="services-description">Një prerje që të përshtatet. Një pamje e kuruar. Zgjidh kujdesin që të duhet dhe lëre pjesën tjetër në duart tona.</p>
-          <UButton to="/booking" size="xl" trailing-icon="i-lucide-arrow-up-right" class="services-cta">Rezervo vizitën tënde</UButton>
+          <p class="services-description">Shiko shërbimet tona, çmimet dhe kohëzgjatjen e secilit. Zgjidh çfarë të duhet dhe kombinoji në një rezervim.</p>
+          <UButton to="/booking" size="xl" trailing-icon="i-lucide-arrow-up-right" class="services-cta">Rezervo terminin tënd</UButton>
           <div class="service-values" aria-label="Përparësitë e shërbimit">
             <div><UIcon name="i-lucide-message-circle" /><span><strong>Konsultim</strong><small>Stili përshtatet me ty</small></span></div>
             <div><UIcon name="i-lucide-sparkles" /><span><strong>Detaje</strong><small>Përfundim i pastër</small></span></div>
@@ -86,7 +86,10 @@ const serviceIcon = (index: number) => serviceIcons[index % serviceIcons.length]
             </li>
           </ul>
           <div v-else class="service-menu-empty"><UIcon name="i-lucide-scissors" /><span>Shërbimet do të shfaqen sapo të publikohen.</span></div>
-          <div class="services-gallery-footer"><span><UIcon name="i-lucide-layers-3" /> Mund të kombinosh disa shërbime në një rezervim.</span><NuxtLink to="/booking">Fillo rezervimin <UIcon name="i-lucide-arrow-right" /></NuxtLink></div>
+          <div class="services-gallery-footer">
+            <span><UIcon name="i-lucide-layers-3" class="size-4 shrink-0" /> Mund të kombinosh disa shërbime në një rezervim.</span>
+            <UButton to="/booking" size="xl" trailing-icon="i-lucide-arrow-up-right" class="services-booking-button">Fillo rezervimin</UButton>
+          </div>
         </div>
       </div>
     </section>
@@ -100,7 +103,7 @@ const serviceIcon = (index: number) => serviceIcons[index % serviceIcons.length]
 
     <section id="kontakti" class="contact scroll-mt-20" aria-labelledby="contact-title">
       <div class="shell contact-grid">
-        <div class="contact-brand"><CommonBrand /><p>Një hapësirë moderne për prerje të sakta, kujdes personal dhe kohë të kaluar mirë.</p><UButton to="/booking" trailing-icon="i-lucide-calendar-check">Rezervo online</UButton></div>
+        <div class="contact-brand"><CommonBrand /><p>Një hapësirë moderne për prerje të sakta, kujdes personal dhe kohë të kaluar mirë.</p><UButton to="/booking" size="xl" trailing-icon="i-lucide-arrow-up-right" class="w-full justify-center sm:w-auto">Rezervo online</UButton></div>
         <div><p class="contact-label">Shërbimet</p><ul class="contact-services"><li v-for="service in services" :key="service.id"><span>{{ service.name }}</span><strong>{{ money(service.price_minor) }}</strong></li><li v-if="!services.length">Së shpejti</li></ul></div>
         <div><p id="contact-title" class="contact-label">Na kontaktoni</p><address>
           <div><UIcon name="i-lucide-map-pin" /><span><strong>Adresa</strong><a v-if="directionsLink" :href="directionsLink" target="_blank" rel="noopener noreferrer">{{ shop?.address }}</a><small v-else>Adresa do të publikohet së shpejti</small></span></div>
@@ -121,15 +124,17 @@ const serviceIcon = (index: number) => serviceIcons[index % serviceIcons.length]
 .hero-grid { position: relative; display: flex; min-height: 100svh; align-items: center; padding-top: var(--ui-header-height); }
 .hero-copy { z-index: 2; display: flex; width: min(100%, 46rem); flex-direction: column; justify-content: center; padding-block: clamp(3rem, 7vw, 6rem); }
 .availability { display: inline-flex; width: fit-content; align-items: center; gap: .7rem; border: 1px solid rgb(255 255 255 / .12); border-radius: 999px; padding: .55rem .85rem; color: rgb(255 255 255 / .7); font-size: .75rem; }
-.availability span { width: .5rem; height: .5rem; border-radius: 50%; background: #86c4aa; box-shadow: 0 0 0 .3rem rgb(134 196 170 / .12); }
-.hero h1 { margin-top: 1rem; max-width: 49rem; font-size: clamp(3.3rem, 7vw, 6.6rem); font-weight: 780; letter-spacing: -.07em; line-height: .9; }
+.availability span { width: .5rem; height: .5rem; flex-shrink: 0; border-radius: 50%; background: #86c4aa; box-shadow: 0 0 0 .3rem rgb(134 196 170 / .12); }
+.hero-eyebrow { margin-top: clamp(1.5rem, 3vw, 2rem); line-height: 1.7; text-wrap: balance; }
+.hero h1 { margin-top: clamp(.75rem, 1.5vw, 1rem); max-width: 49rem; font-size: clamp(2.8rem, 6vw, 5.5rem); font-weight: 780; letter-spacing: -.055em; line-height: 1; text-wrap: balance; }
 .hero h1 em { color: #86c4aa; font-style: normal; }
-.hero-description { max-width: 36rem; margin-top: 1.75rem; color: rgb(255 255 255 / .64); font-size: clamp(1rem, 1.5vw, 1.15rem); line-height: 1.75; }
+.hero-description { max-width: 36rem; margin-top: clamp(1.25rem, 2.5vw, 1.5rem); color: rgb(255 255 255 / .64); font-size: clamp(1rem, 1.5vw, 1.15rem); line-height: 1.7; text-wrap: pretty; }
+.hero-actions { margin-top: clamp(1.5rem, 3vw, 2rem); }
 .hero .hero-outline { background: rgb(7 16 12 / .7); color: #fff; border: 1px solid rgb(255 255 255 / .4); box-shadow: none; backdrop-filter: blur(8px); }
 .hero .hero-outline:hover, .hero .hero-outline:active { background: #d9eee4; border-color: #d9eee4; color: #0d1f1a; }
 .hero .hero-outline:focus-visible { outline: 2px solid #b5ddcc; outline-offset: 4px; }
-.assurances { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; margin-top: 2rem; color: rgb(255 255 255 / .46); font-size: .72rem; }
-.assurances span { display: flex; align-items: center; gap: .4rem; }.assurances svg { color: #86c4aa; }
+.assurances { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; margin-top: clamp(1.25rem, 2.5vw, 1.5rem); color: rgb(255 255 255 / .65); font-size: .72rem; line-height: 1.5; }
+.assurances > span { display: inline-flex; align-items: center; gap: .5rem; }
 .hero-note { position: absolute; right: 0; bottom: 1.5rem; display: flex; align-items: center; gap: .8rem; border: 1px solid rgb(255 255 255 / .15); border-radius: .75rem; background: rgb(8 17 13 / .78); padding: .8rem 1rem; box-shadow: 0 1rem 3rem rgb(0 0 0 / .2); backdrop-filter: blur(1rem); }.hero-note > svg { width: 1.25rem; color: #86c4aa; }.hero-note strong,.hero-note small { display:block }.hero-note strong { font-size:.78rem }.hero-note small { margin-top:.2rem;color:rgb(255 255 255/.48);font-size:.65rem }
 .services-section { position: relative; overflow: hidden; border-top: 1px solid #e1e6de; background: radial-gradient(circle at 8% 12%, rgb(54 127 102 / .1), transparent 26rem), #f5f5ef; }
 .services-section::before { position: absolute; top: 0; right: 4%; width: 18rem; height: 18rem; border: 1px solid rgb(34 81 67 / .08); border-radius: 50%; content: ''; transform: translateY(-55%); }
@@ -144,6 +149,7 @@ const serviceIcon = (index: number) => serviceIcons[index % serviceIcons.length]
 .service-values > div { display: grid; grid-template-columns: 2rem 1fr; align-items: center; gap: .75rem; padding-block: .9rem; border-bottom: 1px solid #d8dfd6; }
 .service-values svg { width: 1.1rem; color: #367f66; }
 .service-values strong,.service-values small { display: block; }
+@media (max-width: 639px) { .service-values { display: none; } }
 .service-values strong { color: #25352e; font-size: .8rem; font-weight: 700; }
 .service-values small { margin-top: .15rem; color: #748078; font-size: .7rem; }
 .services-gallery { min-width: 0; }
@@ -182,10 +188,9 @@ const serviceIcon = (index: number) => serviceIcons[index % serviceIcons.length]
 .service-card-featured .service-card-price { color: rgb(255 255 255 / .48); }
 .service-menu-empty { display: flex; min-height: 14rem; align-items: center; justify-content: center; gap: .75rem; border: 1px dashed #cbd7ce; border-radius: .8rem; color: #68756d; font-size: .85rem; }
 .services-gallery-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: .9rem; padding: .85rem .15rem; color: #68756d; font-size: .72rem; }
-.services-gallery-footer > span,.services-gallery-footer a { display: flex; align-items: center; gap: .4rem; }
-.services-gallery-footer svg { width: .9rem; height: .9rem; }
-.services-gallery-footer a { flex-shrink: 0; color: #286652; font-weight: 700; }
-.services-gallery-footer a:hover { color: #17382d; }
+.services-gallery-footer > span { display: flex; align-items: center; gap: .5rem; line-height: 1.6; }
+.services-booking-button { flex-shrink: 0; justify-content: center; }
+@media (max-width: 639px) { .services-booking-button { width: 100%; } }
 @media (min-width: 640px) { .service-card-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .service-card-featured { grid-column: 1 / -1; } .service-card-featured .service-card { padding: 1.6rem; } }
 @media (min-width: 900px) { .services-layout { grid-template-columns: minmax(0,.72fr) minmax(0,1.28fr); gap: clamp(3rem,6vw,6.5rem); } .services-intro { position: sticky; top: calc(var(--ui-header-height) + 2rem); padding-top: .4rem; } }
 @media (max-width: 639px) { .services-gallery-heading { align-items: start; } .services-gallery-heading p { max-width: 15rem; } .services-count { margin-top: .15rem; } .service-card { min-height: 14.5rem; } .service-card-featured .service-card { min-height: 15.5rem; } .services-gallery-footer { align-items: flex-start; flex-direction: column; } .services-cta { justify-content: center; width: 100%; } }
@@ -196,5 +201,5 @@ const serviceIcon = (index: number) => serviceIcons[index % serviceIcons.length]
 @media(min-width:900px){.story-grid{grid-template-columns:1fr 1fr;align-items:end}.story-grid{gap:7rem}}
 @media(min-width:1024px){.contact-grid{grid-template-columns:.9fr 1fr 1fr 1.65fr}}
 @media(max-width:899px){.hero-background img{object-position:74% center}.hero-shade{background:linear-gradient(90deg,rgb(3 9 6/.97) 0%,rgb(3 9 6/.84) 55%,rgb(3 9 6/.34) 100%),linear-gradient(0deg,rgb(3 8 5/.84),transparent 55%)}.hero-copy{padding-block:3.5rem 5rem}.hero-note{right:1rem;bottom:1rem}}
-@media(max-width:639px){.hero-background img{object-position:82% center}.hero h1{font-size:clamp(3rem,15vw,4.4rem)}.hero-description{max-width:31rem;color:rgb(255 255 255/.72)}.assurances{gap:.75rem 1rem}.hero-note{display:none}}
+@media(max-width:639px){.hero-background img{object-position:82% center}.hero-copy{padding-block:2rem 2.5rem}.hero h1{font-size:clamp(2.5rem,12vw,3.5rem)}.hero-description{max-width:31rem;color:rgb(255 255 255/.72)}.assurances{gap:.75rem 1rem}.hero-note{display:none}}
 </style>

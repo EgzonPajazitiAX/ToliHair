@@ -52,21 +52,28 @@ const provider = createServer(async (req, res) => {
     return send(200, { id: user.id, full_name: 'Fixture User', role: user.email.startsWith('admin') ? 'admin' : 'staff', is_active: active && !user.email.startsWith('inactive') })
   }
   if (url.pathname === '/rest/v1/rpc/get_booking_catalog') return send(200, {
-    shop:{name:'Toli Hair',phone:null,address:null,timezone:'Europe/Belgrade',currency:'EUR',booking_enabled:true,minimum_notice_minutes:0,booking_horizon_days:60},
+    shop:{name:'Toli Hair',phone:null,address:null,timezone:'Europe/Belgrade',currency:'EUR',booking_enabled:true,minimum_notice_minutes:0,booking_horizon_days:60,peak_pricing_enabled:false,peak_start_time:'17:00',peak_end_time:'20:00',peak_multiplier:1.5},
     services:[{id:'30000000-0000-4000-8000-000000000001',name:'Prerje klasike',description:'Prerje profesionale',duration_minutes:30,price_minor:2500},{id:'30000000-0000-4000-8000-000000000002',name:'Mjekër',description:'Rregullim profesional',duration_minutes:20,price_minor:1200}],
     barbers:[{id:'20000000-0000-4000-8000-000000000001',name:'Berberi testues',bio:'Pjesë e ekipit',service_ids:['30000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002']}],
   })
   if (url.pathname === '/rest/v1/rpc/get_available_slots_multi') return send(200, [{slot_start:'2026-09-14T10:00:00Z',local_time:'10:00',barber_id:'20000000-0000-4000-8000-000000000001',barber_name:'Fixture Barber'}])
   if (url.pathname === '/rest/v1/rpc/get_available_slots') return send(200, [{slot_start:'2026-09-14T10:00:00Z',local_time:'10:00',barber_id:'20000000-0000-4000-8000-000000000001',barber_name:'Fixture Barber'}])
-  if (url.pathname === '/rest/v1/rpc/create_guest_booking' && body.p_key === '10000000-0000-4000-8000-000000000002') return send(400,{code:'23P01',message:'private overlap detail'})
-  if (url.pathname === '/rest/v1/rpc/create_guest_booking_multi') return send(200, {
+  if (url.pathname === '/rest/v1/rpc/get_booking_start_slots') return send(200, [{slot_start:'2026-09-14T10:00:00Z',local_time:'10:00',barber_id:body.p_barber,barber_name:'Fixture Barber',service_ids:['30000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002']}])
+  if (url.pathname === '/rest/v1/rpc/create_guest_booking_priced') {
+    if (!privileged) return send(403,{code:'42501',message:'Private booking RPC'})
+    if (!Array.isArray(body.p_services) || !body.p_services.length) return send(400,{code:'22023',message:'Invalid service selection'})
+    if (body.p_key === '10000000-0000-4000-8000-000000000002') return send(400,{code:'23P01',message:'private overlap detail'})
+    const quote = body.p_services.length > 1 ? 3700 : 2500
+    if (body.p_expected_price != null && body.p_expected_price !== quote) return send(400,{code:'40001',message:'Booking price changed'})
+    if (body.p_services.length > 1) return send(200, {
     receipt_token:'40000000-0000-4000-8000-000000000003',appointment_id:'50000000-0000-4000-8000-000000000003',customer_name:body.p_name,
     service_name:'Prerje klasike + Mjekër',barber_id:body.p_barber,starts_at:body.p_start,ends_at:'2026-09-14T10:50:00Z',duration_minutes:50,price_minor:3700,currency:'EUR',status:'confirmed',
   })
-  if (url.pathname === '/rest/v1/rpc/create_guest_booking') return send(200, {
+    return send(200, {
     receipt_token:'40000000-0000-4000-8000-000000000001',appointment_id:'50000000-0000-4000-8000-000000000001',customer_name:body.p_name,
     service_name:'Fixture Service',barber_id:body.p_barber,starts_at:body.p_start,ends_at:'2026-09-14T10:30:00Z',duration_minutes:30,price_minor:2500,currency:'EUR',status:'confirmed',
   })
+  }
   if (url.pathname === '/rest/v1/rpc/get_guest_booking_receipt' && body.p_token === '40000000-0000-4000-8000-000000000002') return send(200,null)
   if (url.pathname === '/rest/v1/rpc/get_guest_booking_receipt') return send(200, {
     receipt_token:body.p_token,appointment_id:'50000000-0000-4000-8000-000000000001',customer_name:'Fixture Customer',service_name:'Fixture Service',
@@ -164,15 +171,20 @@ try {
   assert.equal((await availability.json()).slots.length,1)
   const multiAvailability = await expect('/api/booking/availability?serviceIds=30000000-0000-4000-8000-000000000001,30000000-0000-4000-8000-000000000002&barberId=20000000-0000-4000-8000-000000000001&date=2026-09-14',200)
   assert.equal((await multiAvailability.json()).slots.length,1)
+  await expect('/api/booking/start-times',422)
+  const startTimes = await expect('/api/booking/start-times?barberId=20000000-0000-4000-8000-000000000001&date=2026-09-14',200)
+  assert.equal((await startTimes.json()).slots[0].serviceIds.length,2)
   const bookingBody = {idempotencyKey:'10000000-0000-4000-8000-000000000001',serviceId:'30000000-0000-4000-8000-000000000001',barberId:'20000000-0000-4000-8000-000000000001',startsAt:'2026-09-14T10:00:00Z',customer:{fullName:'Fixture Customer',phone:'+36 201234567',email:'test@example.com'}}
   await expect('/api/booking',403,{method:'POST',body:bookingBody,headers:{origin:'https://evil.example'}})
   await expect('/api/booking',422,{method:'POST',body:{}})
-  const booked = await expect('/api/booking',200,{method:'POST',body:bookingBody})
+  const booked = await expect('/api/booking',200,{method:'POST',body:{...bookingBody,expectedPriceMinor:2500}})
   const bookedJson = await booked.json()
   assert.equal(bookedJson.receipt.customerName,'Fixture Customer')
   assert.ok(!JSON.stringify(bookedJson).includes('customer_phone'))
   const multiBooked = await expect('/api/booking',200,{method:'POST',body:{...bookingBody,idempotencyKey:'10000000-0000-4000-8000-000000000004',serviceId:undefined,serviceIds:['30000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002']}})
   assert.equal((await multiBooked.json()).receipt.durationMinutes,50)
+  const changedQuote = await expect('/api/booking',409,{method:'POST',body:{...bookingBody,idempotencyKey:'10000000-0000-4000-8000-000000000005',expectedPriceMinor:1}})
+  assert.equal((await changedQuote.json()).data.reason,'price_changed')
   const occupied = await expect('/api/booking',409,{method:'POST',body:{...bookingBody,idempotencyKey:'10000000-0000-4000-8000-000000000002'}})
   assert.ok(!(await occupied.text()).includes('private overlap detail'))
   const receipt = await expect('/api/booking/receipt',200,{method:'POST',body:{token:bookedJson.receipt.token}})

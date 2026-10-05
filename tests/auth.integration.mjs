@@ -192,6 +192,13 @@ try {
   }
   const admin = jar()
   const loggedIn = await expect('/api/auth/login',200,{method:'POST',body:credentials('admin'),cookies:admin})
+  const loginReturn = await expect('/login',302,{cookies:admin})
+  assert.equal(loginReturn.headers.get('location'),'/dashboard')
+  assert.match(loginReturn.headers.get('cache-control'),/no-store/)
+  const loginTarget = await expect('/login?redirect=/dashboard/calendar',302,{cookies:admin})
+  assert.equal(loginTarget.headers.get('location'),'/dashboard/calendar')
+  const unsafeTarget = await expect('/login?redirect=https://evil.example',302,{cookies:admin})
+  assert.equal(unsafeTarget.headers.get('location'),'/dashboard')
   const json = await loggedIn.json()
   assert.equal(json.staff.role,'admin')
   assert.ok(!JSON.stringify(json).includes('access_token'))
@@ -242,13 +249,19 @@ try {
   const decoded = JSON.parse(Buffer.from(decodeURIComponent(cookieValue).slice('base64-'.length),'base64url').toString())
   decoded.expires_at = Math.floor(Date.now()/1000)-60
   admin.set(cookieName,'base64-'+Buffer.from(JSON.stringify(decoded)).toString('base64url'))
+  const renewedLogin = await expect('/login',302,{cookies:admin})
+  assert.equal(renewedLogin.headers.get('location'),'/dashboard')
+  assert.ok(renewedLogin.headers.getSetCookie().length > 0,'Renewed cookies reach the browser on login redirect')
   await expect('/api/auth/me',200,{cookies:admin})
   assert.ok(renewals > 0,'Expired session refreshed')
   active = false
+  await expect('/login',200,{cookies:admin})
   await expect('/api/dashboard/session',401,{cookies:admin})
   active = true
   const staff = jar()
   await expect('/api/auth/login',200,{method:'POST',body:credentials('staff'),cookies:staff})
+  const staffReturn = await expect('/login?redirect=/dashboard/settings',302,{cookies:staff})
+  assert.equal(staffReturn.headers.get('location'),'/dashboard')
   await expect('/dashboard/appointments',200,{cookies:staff})
   await expect('/dashboard/settings',403,{cookies:staff,headers:{accept:'text/html'}})
   await expect('/api/dashboard/settings',403,{cookies:staff})
@@ -258,6 +271,7 @@ try {
   }
   await expect('/api/dashboard/%73ettings',403,{cookies:staff})
   await expect('/api/auth/logout',200,{method:'POST',body:{},cookies:admin})
+  await expect('/login',200,{cookies:admin})
   await expect('/api/dashboard/session',401,{cookies:admin})
   // The IP budget eventually rejects requests before calling Supabase.
   let limited = false

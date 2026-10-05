@@ -1,10 +1,20 @@
-import { decodedAuthPath, isDashboardPath, requiresAdmin } from '#shared/utils/auth-policy'
+import { decodedAuthPath, isDashboardPath, requiresAdmin, safeDashboardRedirect } from '#shared/utils/auth-policy'
 
 export default defineEventHandler(async (event) => {
   const path = decodedAuthPath(getRequestURL(event).pathname)
-  if (/^\/api\/auth(?:\/|$)/.test(path) || isDashboardPath(path)) {
+  const isLogin = /^\/login\/?$/.test(path)
+  if (isLogin || /^\/api\/auth(?:\/|$)/.test(path) || isDashboardPath(path)) {
     setHeader(event, 'Cache-Control', 'private, no-store')
     setHeader(event, 'Vary', 'Cookie')
+  }
+  if (isLogin && ['GET', 'HEAD'].includes(event.method)) {
+    // Validate on the original request so renewed cookies reach the browser.
+    const staff = await readStaff(event)
+    if (staff) {
+      const target = safeDashboardRedirect(getQuery(event).redirect)
+      return sendRedirect(event, requiresAdmin(target) && staff.role !== 'admin' ? '/dashboard' : target, 302)
+    }
+    return
   }
   if (!isDashboardPath(path)) return
   if (!['GET', 'HEAD'].includes(event.method)) requireSameOrigin(event)

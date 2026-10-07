@@ -36,6 +36,11 @@ body { margin: 0; overflow-x: hidden; background: var(--ui-bg); color: var(--ui-
 ::selection { background: #b5ddcc; color: #0d1f1a; }
 button, a, input { -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 2px solid var(--ui-primary); outline-offset: 5px; }
+/* Keep field focus on the border, without the detached outer outline.
+   Buttons, links, checkboxes and radios retain their wider focus indicator. */
+input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+textarea:focus-visible,
+select:focus-visible { outline-width: 2px; outline-offset: -2px; }
 .shell { width: min(var(--ui-container), calc(100% - 3rem)); margin-inline: auto; }
 .eyebrow { font-size: .68rem; font-weight: 750; letter-spacing: .18em; text-transform: uppercase; }
 .display { font-family: var(--font-display); font-weight: 750; letter-spacing: -.055em; line-height: 1.02; text-wrap: balance; }

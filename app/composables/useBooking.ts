@@ -30,6 +30,7 @@ export function useBooking() {
   onScopeDispose(() => { availabilityRequest++ })
   const submitting = ref(false)
   const message = ref('')
+  const feedback = useFeedbackToast(message)
   const idempotencyKey = ref('')
   const customer = reactive({ fullName: '', phone: '', email: '' })
 
@@ -119,6 +120,7 @@ export function useBooking() {
       receipt.value = result.receipt
       try { sessionStorage.setItem('toli-booking-receipt', result.receipt.token) }
       catch { /* The in-memory receipt still confirms a successful booking. */ }
+      feedback.success('Rezervimi u konfirmua me sukses.')
       await navigateTo('/booking/success')
     }
     catch (error: unknown) {

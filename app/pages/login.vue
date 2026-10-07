@@ -9,6 +9,7 @@ const { login } = useAuth()
 const form = reactive({ email: '', password: '' })
 const pending = ref(false)
 const message = ref('')
+const feedback = useFeedbackToast(message)
 
 async function submit() {
   if (pending.value) return
@@ -17,6 +18,7 @@ async function submit() {
   try {
     await login(form.email.trim(), form.password)
     form.password = ''
+    feedback.success('U kyçët me sukses.')
     await navigateTo(safeDashboardRedirect(route.query.redirect))
   }
   catch (error: unknown) {

@@ -12,8 +12,12 @@ const { data: catalog } = await useFetch<BookingCatalog>('/api/booking/catalog',
 const shop = computed(() => catalog.value?.shop)
 const services = computed(() => catalog.value?.services ?? [])
 const phoneLink = computed(() => shop.value?.phone ? `tel:${shop.value.phone.replace(/[^\d+]/g, '')}` : '')
-const directionsLink = computed(() => shop.value?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.value.address)}` : '')
-const mapLink = computed(() => shop.value?.address ? `https://www.google.com/maps?q=${encodeURIComponent(shop.value.address)}&output=embed` : '')
+// Exact pin supplied by the shop; address searches can select a nearby business.
+const locationCoordinates = '42.3591014,20.5859649'
+const locationAddress = 'Fortesë (Bela Crkva)'
+const locationLandmark = 'Këtu fillon kujdesi për stilin tënd.'
+const locationLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationCoordinates)}`
+const mapLink = `https://www.google.com/maps?q=${encodeURIComponent(locationCoordinates)}&z=17&output=embed`
 const money = (value: number) => new Intl.NumberFormat('sq-XK', { style: 'currency', currency: 'EUR' }).format(value / 100)
 const serviceIcons = ['i-lucide-scissors', 'i-lucide-sparkles', 'i-lucide-scan-face', 'i-lucide-wand-sparkles']
 const serviceIcon = (index: number) => serviceIcons[index % serviceIcons.length]
@@ -106,11 +110,15 @@ const serviceIcon = (index: number) => serviceIcons[index % serviceIcons.length]
         <div class="contact-brand"><CommonBrand /><p>Një hapësirë moderne për prerje të sakta, kujdes personal dhe kohë të kaluar mirë.</p><UButton to="/booking" size="xl" trailing-icon="i-lucide-arrow-up-right" class="w-full justify-center sm:w-auto">Rezervo online</UButton></div>
         <div><p class="contact-label">Shërbimet</p><ul class="contact-services"><li v-for="service in services" :key="service.id"><span>{{ service.name }}</span><strong>{{ money(service.price_minor) }}</strong></li><li v-if="!services.length">Së shpejti</li></ul></div>
         <div><p id="contact-title" class="contact-label">Na kontaktoni</p><address>
-          <div><UIcon name="i-lucide-map-pin" /><span><strong>Adresa</strong><a v-if="directionsLink" :href="directionsLink" target="_blank" rel="noopener noreferrer">{{ shop?.address }}</a><small v-else>Adresa do të publikohet së shpejti</small></span></div>
-          <div><UIcon name="i-lucide-phone" /><span><strong>Telefoni</strong><a v-if="phoneLink" :href="phoneLink">{{ shop?.phone }}</a><small v-else>Numri do të publikohet së shpejti</small></span></div>
+          <div><UIcon name="i-lucide-map-pin" /><span><strong>Adresa</strong><a :href="locationLink" target="_blank" rel="noopener noreferrer" class="contact-action" aria-label="Shiko lokacionin e Toli Hair në Google Maps"><span>{{ locationAddress }}</span><UIcon name="i-lucide-arrow-up-right" class="size-4 shrink-0" aria-hidden="true" /></a><small>{{ locationLandmark }}</small></span></div>
+          <div><UIcon name="i-lucide-phone" /><span><strong>Telefoni</strong><a v-if="phoneLink" :href="phoneLink" class="contact-action" :aria-label="`Telefono Toli Hair në ${shop?.phone}`"><span>{{ shop?.phone }}</span><UIcon name="i-lucide-arrow-up-right" class="size-4 shrink-0" aria-hidden="true" /></a><small v-else>Numri do të publikohet së shpejti</small></span></div>
           <div><UIcon name="i-lucide-calendar-clock" /><span><strong>Rezervimet</strong><NuxtLink to="/booking">Online, 24 orë në ditë</NuxtLink></span></div>
         </address></div>
-        <div class="map"><iframe v-if="mapLink" :src="mapLink" title="Lokacioni i Toli Hair" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen /><div v-else class="map-empty"><UIcon name="i-lucide-map" /><strong>Lokacioni</strong><span>Harta shfaqet pasi adresa të vendoset në panel.</span></div></div>
+        <section class="map" aria-labelledby="map-title">
+          <div class="map-heading"><span class="map-pin"><UIcon name="i-lucide-map-pin" class="size-5" /></span><div><p>Na gjeni këtu</p><h3 id="map-title">Toli Hair · Fortesë</h3></div><a :href="locationLink" target="_blank" rel="noopener noreferrer" class="map-expand" aria-label="Hap lokacionin në Google Maps"><UIcon name="i-lucide-arrow-up-right" class="size-5" /></a></div>
+          <iframe :src="mapLink" title="Harta e Toli Hair në Fortesë" width="600" height="300" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen />
+          <div class="map-details"><p><strong>{{ locationAddress }}</strong><span>{{ locationLandmark }}</span></p><UButton :href="locationLink" target="_blank" rel="noopener noreferrer" size="lg" icon="i-lucide-map-pin" class="map-location-button">Shiko lokacionin</UButton></div>
+        </section>
       </div>
     </section>
   </div>
@@ -196,10 +204,35 @@ const serviceIcon = (index: number) => serviceIcons[index % serviceIcons.length]
 @media (max-width: 639px) { .services-gallery-heading { align-items: start; } .services-gallery-heading p { max-width: 15rem; } .services-count { margin-top: .15rem; } .service-card { min-height: 14.5rem; } .service-card-featured .service-card { min-height: 15.5rem; } .services-gallery-footer { align-items: flex-start; flex-direction: column; } .services-cta { justify-content: center; width: 100%; } }
 .story { background:#173128 }.story-grid { display:grid;gap:3rem;padding-block:clamp(4rem,9vw,7rem) }.story ol { margin-top:2.5rem;border-top:1px solid rgb(255 255 255/.12) }.story li { display:grid;grid-template-columns:3rem 1fr;border-bottom:1px solid rgb(255 255 255/.12);padding-block:1rem;color:white;font-weight:650 }.story li span { color:#86c4aa;font-size:.7rem }
 .contact { background:#0d1713;color:white }.contact-grid { display:grid;gap:2.75rem;padding-block:clamp(3.5rem,7vw,5.5rem) }.contact-brand p { max-width:17rem;margin:1.5rem 0;color:rgb(255 255 255/.54);font-size:.85rem;line-height:1.75 }.contact-label { margin-bottom:1.2rem;color:#86c4aa;font-size:.7rem;font-weight:800;letter-spacing:.17em;text-transform:uppercase }.contact-services li { display:flex;justify-content:space-between;gap:1rem;border-bottom:1px solid rgb(255 255 255/.09);padding:.65rem 0;color:rgb(255 255 255/.6);font-size:.8rem }.contact-services strong { color:white }.contact address { display:grid;gap:1.35rem;font-style:normal }.contact address>div { display:grid;grid-template-columns:1.2rem 1fr;gap:.8rem }.contact address svg { color:#86c4aa }.contact address strong,.contact address a,.contact address small { display:block }.contact address strong { margin-bottom:.2rem;font-size:.8rem }.contact address a,.contact address small { color:rgb(255 255 255/.55);font-size:.8rem;line-height:1.5 }.contact address a:hover { color:white }
-.map { min-height:18rem;overflow:hidden;border:1px solid rgb(255 255 255/.12);background:#17231e }.map iframe { width:100%;height:100%;min-height:18rem;border:0;filter:grayscale(.55) invert(.9) contrast(.8) }.map-empty { display:flex;min-height:18rem;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;padding:2rem;text-align:center;color:rgb(255 255 255/.45) }.map-empty svg { width:2rem;height:2rem }.map-empty strong { color:white }.map-empty span { max-width:15rem;font-size:.78rem }
+.contact address .contact-action { display:inline-flex; min-height:2.75rem; max-width:100%; align-items:center; gap:.5rem; border-radius:.3rem; color:#b5ddcc; }
+.contact-action > span { overflow-wrap:anywhere; text-decoration:underline; text-decoration-color:rgb(181 221 204/.5); text-underline-offset:.3rem; }
+.contact address .contact-action:hover { color:white; }
+.contact-action:hover > span { text-decoration-color:currentColor; }
+.contact-action:focus-visible { outline:2px solid #86c4aa; outline-offset:4px; }
+.map { min-width:0; overflow:hidden; align-self:start; border:1px solid rgb(255 255 255/.14); border-radius:1rem; background:#17231e; box-shadow:0 1rem 3rem rgb(0 0 0/.12); }
+.map-heading { display:flex; align-items:center; gap:.75rem; padding:1rem; }
+.map-pin { display:grid; width:2.5rem; height:2.5rem; flex-shrink:0; place-items:center; border-radius:.75rem; background:rgb(134 196 170/.12); color:#a9d8c4; }
+.map-heading > div { min-width:0; flex:1; }
+.map-heading p { color:#a9d8c4; font-size:.65rem; }
+.map-heading h3 { margin-top:.2rem; font-size:.85rem; font-weight:650; }
+.map-expand { display:grid; width:2.5rem; height:2.5rem; flex-shrink:0; place-items:center; border:1px solid rgb(255 255 255/.15); border-radius:.65rem; color:#d9eee4; }
+.map-expand:hover { background:rgb(255 255 255/.08); }
+.map-expand:focus-visible { outline:2px solid #86c4aa; outline-offset:3px; }
+.map iframe { display:block; width:100%; height:17rem; border:0; background:#e8eee5; }
+.map-details { display:grid; gap:1rem; padding:1.1rem; }
+.map-details strong,.map-details span { display:block; }
+.map-details strong { font-size:.8rem; font-weight:600; }
+.map-details span { margin-top:.35rem; color:rgb(255 255 255/.6); font-size:.75rem; line-height:1.6; }
+.map-location-button { width:100%; justify-content:center; }
+@media(max-width:639px) { .map iframe { height:19rem; } }
 @media(min-width:640px){.contact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(min-width:900px){.story-grid{grid-template-columns:1fr 1fr;align-items:end}.story-grid{gap:7rem}}
-@media(min-width:1024px){.contact-grid{grid-template-columns:.9fr 1fr 1fr 1.65fr}}
+@media(min-width:1024px){
+  .contact-grid { grid-template-columns:.9fr 1fr 1fr 1.65fr; align-items:center; }
+  .map iframe { height:13rem; }
+  .map-heading { padding:.85rem 1rem; }
+  .map-details { gap:.75rem; padding:.9rem 1rem; }
+}
 @media(max-width:899px){.hero-background img{object-position:74% center}.hero-shade{background:linear-gradient(90deg,rgb(3 9 6/.97) 0%,rgb(3 9 6/.84) 55%,rgb(3 9 6/.34) 100%),linear-gradient(0deg,rgb(3 8 5/.84),transparent 55%)}.hero-copy{padding-block:3.5rem 5rem}.hero-note{right:1rem;bottom:1rem}}
 @media(max-width:639px){.hero-background img{object-position:82% center}.hero-copy{padding-block:2rem 2.5rem}.hero h1{font-size:clamp(2.5rem,12vw,3.5rem)}.hero-description{max-width:31rem;color:rgb(255 255 255/.72)}.assurances{gap:.75rem 1rem}.hero-note{display:none}}
 </style>

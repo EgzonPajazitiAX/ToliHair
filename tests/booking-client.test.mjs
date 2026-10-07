@@ -12,11 +12,14 @@ const source = stripTypeScriptTypes(readFileSync(new URL('../app/composables/use
 const pricingSource = stripTypeScriptTypes(readFileSync(new URL('../shared/utils/pricing.ts', import.meta.url), 'utf8')).replaceAll('export function', 'function')
 const idempotencySource = stripTypeScriptTypes(readFileSync(new URL('../app/utils/idempotency.ts', import.meta.url), 'utf8'))
   .replace('export function createIdempotencyKey', 'function createIdempotencyKey')
+const feedbackSource = stripTypeScriptTypes(readFileSync(new URL('../app/composables/useFeedbackToast.ts', import.meta.url), 'utf8'))
+  .replace('export function useFeedbackToast', 'function useFeedbackToast')
 
 function setup(fetcher, cryptoApi = { randomUUID }) {
   const scope = effectScope()
   const receipt = ref(null)
   const navigations = []
+  const notifications = []
   const catalog = ref({
     shop: { timezone: 'Europe/Belgrade', booking_horizon_days: 60, peak_pricing_enabled: true, peak_start_time: '17:00', peak_end_time: '20:00', peak_multiplier: 1.5 },
     services: [{ id: 'service', name: 'Prerje', duration_minutes: 30, price_minor: 500 }],
@@ -26,16 +29,17 @@ function setup(fetcher, cryptoApi = { randomUUID }) {
     computed, onScopeDispose, reactive, ref, watch,
     useFetch: () => ({ data: catalog, refresh: async () => {} }),
     useState: () => receipt,
+    useToast: () => ({ add: notification => notifications.push(notification) }),
     $fetch: fetcher,
     crypto: cryptoApi,
     sessionStorage: { setItem() { throw new Error('Storage blocked') } },
     navigateTo: async path => { navigations.push(path) },
   }
-  const booking = scope.run(() => runInNewContext(`${pricingSource}\n${idempotencySource}\n${source}\nuseBooking()`, context))
+  const booking = scope.run(() => runInNewContext(`${feedbackSource}\n${pricingSource}\n${idempotencySource}\n${source}\nuseBooking()`, context))
   booking.chooseBarber('barber')
   booking.toggleService('service')
   booking.date.value = '2026-09-15'
-  return { booking, scope, receipt, navigations, catalog }
+  return { booking, scope, receipt, navigations, catalog, notifications }
 }
 
 test('the flow chooses time before services and checks the complete duration before details', async () => {
@@ -68,13 +72,16 @@ test('services that do not fit the chosen time are not offered', () => {
 })
 
 test('an unavailable service combination does not continue to customer details', async () => {
-  const { booking, scope } = setup(async () => ({ slots: [] }))
+  const { booking, scope, notifications } = setup(async () => ({ slots: [] }))
   try {
     booking.slot.value = { startsAt: '2026-09-15T15:00:00Z', localTime: '17:00', barberId: 'barber' }
     booking.step.value = 3
     await booking.continueFromServices()
     assert.equal(booking.step.value,3)
     assert.match(booking.message.value,/nuk mjafton/)
+    assert.equal(notifications.length, 1)
+    assert.equal(notifications[0].color, 'error')
+    assert.equal(notifications[0].description, booking.message.value)
   }
   finally { scope.stop() }
 })
@@ -135,7 +142,7 @@ test('a stale failure does not clear the current loading state or show an error'
 })
 
 test('successful booking still navigates to confirmation when storage is blocked', async () => {
-  const { booking, scope, receipt, navigations } = setup(async () => ({ receipt: { token: 'receipt-token' } }))
+  const { booking, scope, receipt, navigations, notifications } = setup(async () => ({ receipt: { token: 'receipt-token' } }))
   try {
     booking.slot.value = { startsAt: '2026-09-15T08:00:00Z' }
     await booking.confirm()
@@ -143,6 +150,9 @@ test('successful booking still navigates to confirmation when storage is blocked
     assert.deepEqual(navigations, ['/booking/success'])
     assert.equal(booking.message.value, '')
     assert.equal(booking.submitting.value, false)
+    assert.equal(notifications.length, 1)
+    assert.equal(notifications[0].color, 'success')
+    assert.equal(notifications[0].title, 'Rezervimi u konfirmua me sukses.')
   }
   finally { scope.stop() }
 })

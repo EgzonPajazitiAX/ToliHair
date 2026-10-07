@@ -5,6 +5,7 @@ definePageMeta({ layout: 'dashboard' })
 useSeoMeta({ title: 'Terminet | Toli Hair', robots: 'noindex, nofollow' })
 const route = useRoute()
 const toast = useToast()
+const feedback = useFeedbackToast()
 const today = localDateInZone()
 const defaultTo = shiftDate(today, 30)
 const draft = reactive({ from: today, to: defaultTo, barberId: '', query: '' })
@@ -29,6 +30,7 @@ const editorOpen = computed({
 })
 watch(editor, () => { editorSaving.value = false }, { flush: 'sync' })
 const pending = ref('')
+const statusSaving = ref('')
 const cancellation = ref<AppointmentRecord | null>(null)
 const cancelling = ref(false)
 const cancellationError = ref('')
@@ -36,7 +38,6 @@ const cancellationOpen = computed({
   get: () => cancellation.value !== null,
   set: value => { if (!value && !cancelling.value) cancellation.value = null },
 })
-const message = ref('')
 const filtersOpen = ref(false)
 const autoRefreshing = ref(false)
 const autoRefreshInterval = 30_000
@@ -63,13 +64,14 @@ function appointmentDate(value: string) {
   }
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }).format(localCalendarDate)
 }
-function canEdit(item: AppointmentRecord) { return item.status === 'confirmed' && new Date(item.starts_at).getTime() > Date.now() }
-function hasStarted(item: AppointmentRecord) { return new Date(item.starts_at).getTime() <= Date.now() }
-async function saved() { editor.value = null; await request.refresh(); message.value = 'Termini u ruajt me sukses.' }
+function canEdit(item: AppointmentRecord) { return item.status === 'confirmed' && new Date(item.starts_at).getTime() > now.value }
+function hasStarted(item: AppointmentRecord) { return new Date(item.starts_at).getTime() <= now.value }
+function needsOutcome(item: AppointmentRecord) { return item.status === 'confirmed' && new Date(item.ends_at).getTime() <= now.value }
+async function saved() { editor.value = null; await request.refresh() }
 
 async function refreshAutomatically() {
   now.value = Date.now()
-  if (autoRefreshing.value || cancelling.value || request.status.value === 'pending' || document.visibilityState !== 'visible') return
+  if (autoRefreshing.value || cancelling.value || statusSaving.value || request.status.value === 'pending' || document.visibilityState !== 'visible') return
   if (!data.value) { await request.refresh(); return }
   const knownIds = new Set(data.value.appointments.map(item => item.id))
   const query = { ...apiQuery.value }
@@ -119,6 +121,7 @@ onBeforeUnmount(() => {
 })
 
 function askCancellation(item: AppointmentRecord) {
+  if (statusSaving.value || cancelling.value) return
   cancellationError.value = ''
   pending.value = ''
   cancellation.value = item
@@ -138,26 +141,32 @@ async function confirmCancellation() {
   }
   catch (error: unknown) {
     cancellationError.value = (error as { data?: { statusMessage?: string } }).data?.statusMessage || 'Rezervimi nuk mund të anulohej. Provoni përsëri.'
+    feedback.error(cancellationError.value)
     return
   }
   finally { cancelling.value = false }
   cancellation.value = null
-  message.value = 'Rezervimi u anulua me sukses.'
+  feedback.success('Rezervimi u anulua me sukses.')
   await request.refresh()
 }
 
 async function changeStatus(item: AppointmentRecord, status: Exclude<AppointmentStatus, 'confirmed' | 'cancelled'>) {
+  if (statusSaving.value || cancelling.value) return
   const key = `${item.id}:${status}`
   if (pending.value !== key) { pending.value = key; return }
-  message.value = ''
+  statusSaving.value = key
+  refreshController?.abort()
   try {
     await $fetch('/api/dashboard/appointments', { method: 'POST', headers: { 'x-toli-request': '1' }, body: { action: 'status', id: item.id, version: item.version, status } })
-    pending.value = ''; await request.refresh(); message.value = 'Statusi i terminit u përditësua.'
+    pending.value = ''
+    feedback.success(status === 'completed' ? 'Termini u shënua si i përfunduar.' : 'Klienti u shënua si i paparaqitur.')
+    await request.refresh()
   }
   catch (error: unknown) {
     pending.value = ''
-    message.value = (error as { data?: { statusMessage?: string } }).data?.statusMessage || 'Statusi nuk mund të ndryshohej.'
+    feedback.error((error as { data?: { statusMessage?: string } }).data?.statusMessage || 'Statusi nuk mund të ndryshohej.')
   }
+  finally { statusSaving.value = '' }
 }
 </script>
 
@@ -188,7 +197,6 @@ async function changeStatus(item: AppointmentRecord, status: Exclude<Appointment
       </div>
     </div>
     <div class="mt-5 flex items-center gap-2 text-xs text-muted"><span class="live-dot text-success" aria-hidden="true" /><span>Përditësim automatik në sfond</span></div>
-    <p v-if="message" role="status" class="mt-5 rounded-md bg-elevated p-4 text-sm">{{ message }}</p>
     <p v-if="request.status.value === 'pending' && !data" role="status" class="mt-8">Po ngarkohen terminet…</p>
     <UAlert v-else-if="request.error.value && !data" class="mt-8" color="error" title="Terminet nuk mund të ngarkoheshin" description="Provoni përsëri pas pak." />
     <CommonEmptyState v-else-if="!data?.appointments.length" class="mt-8" title="Nuk u gjet asnjë termin" description="Ndryshoni filtrat ose krijoni një termin të ri manualisht." />
@@ -214,7 +222,8 @@ async function changeStatus(item: AppointmentRecord, status: Exclude<Appointment
       <div class="appointments-heading"><div><h2>Terminet për t’u realizuar</h2><p>{{ data!.appointments.length }} rezultate në periudhën e zgjedhur</p></div><UBadge v-if="activeFilterCount" color="primary" variant="subtle">{{ activeFilterCount }} {{ activeFilterCount === 1 ? 'filtër aktiv' : 'filtra aktivë' }}</UBadge></div>
       <div class="appointment-list">
       <div class="list-columns" aria-hidden="true"><span>Ora / Data</span><span>Klienti</span><span>Shërbimi / Berberi</span><span /></div>
-      <UCollapsible v-for="item in data.appointments" :key="item.id" class="appointment-card">
+      <article v-for="item in data.appointments" :key="item.id" class="appointment-card" :class="{ 'appointment-awaiting-outcome': needsOutcome(item) }">
+      <UCollapsible class="appointment-disclosure">
         <UButton color="neutral" variant="ghost" class="appointment-summary w-full text-left">
           <span class="compact-client">
             <span class="customer-name">{{ item.customer_name }}</span>
@@ -249,7 +258,7 @@ async function changeStatus(item: AppointmentRecord, status: Exclude<Appointment
           <div><dt>Burimi</dt><dd>{{ item.source === 'online' ? 'Rezervim online' : 'Shtuar nga stafi' }}</dd></div>
         </dl>
 
-        <footer v-if="item.status === 'confirmed'" class="appointment-actions">
+        <footer v-if="item.status === 'confirmed' && !needsOutcome(item)" class="appointment-actions">
           <p>{{ hasStarted(item) ? 'Përditëso rezultatin e këtij termini' : 'Menaxho rezervimin' }}</p>
           <div>
             <UButton v-if="canEdit(item)" size="sm" color="neutral" variant="outline" icon="i-lucide-pencil" @click="editor = item">Ndrysho</UButton>
@@ -260,6 +269,15 @@ async function changeStatus(item: AppointmentRecord, status: Exclude<Appointment
         </footer>
         </template>
       </UCollapsible>
+      <footer v-if="needsOutcome(item)" class="outcome-actions" role="group" :aria-labelledby="`outcome-title-${item.id}`">
+        <div class="outcome-heading"><span class="outcome-symbol" aria-hidden="true"><UIcon name="i-lucide-clock-check" class="size-4 shrink-0" /></span><p><small>Veprim i nevojshëm</small><strong :id="`outcome-title-${item.id}`">Si përfundoi termini?</strong><span>Orari ka kaluar. Shëno rezultatin kur të kesh përfunduar.</span></p></div>
+        <div class="outcome-buttons" aria-live="polite">
+          <UButton class="outcome-complete" size="sm" color="primary" icon="i-lucide-check" :loading="statusSaving === `${item.id}:completed`" :disabled="!!statusSaving || cancelling" @click="changeStatus(item, 'completed')">{{ pending === `${item.id}:completed` ? 'Konfirmo përfundimin' : 'Përfundo' }}</UButton>
+          <UButton class="outcome-no-show" size="sm" color="neutral" variant="outline" icon="i-lucide-user-round-x" :loading="statusSaving === `${item.id}:no_show`" :disabled="!!statusSaving || cancelling" @click="changeStatus(item, 'no_show')">{{ pending === `${item.id}:no_show` ? 'Konfirmo mungesën' : 'Nuk u paraqit' }}</UButton>
+          <UButton class="outcome-cancel" size="sm" color="error" variant="ghost" icon="i-lucide-x" :disabled="!!statusSaving || cancelling" @click="askCancellation(item)">Anulo</UButton>
+        </div>
+      </footer>
+      </article>
       </div>
     </template>
     <UModal
@@ -349,7 +367,7 @@ async function changeStatus(item: AppointmentRecord, status: Exclude<Appointment
 .list-columns { display:grid; grid-template-columns:var(--list-grid); align-items:center; gap:1.25rem; padding:.8rem 1.25rem; background:var(--ui-bg-elevated); color:var(--ui-text-muted); font-size:.68rem; font-weight:550; }
 .appointment-card { min-width:0; border-top:1px solid var(--ui-border); background:var(--ui-bg); overflow:hidden; }
 .appointment-summary { display:grid; grid-template-columns:var(--list-grid); align-items:center; gap:1.25rem; padding:1.1rem 1.25rem; border-radius:0; cursor:pointer; list-style:none; }
-.appointment-card[data-state="open"] .appointment-summary { background:color-mix(in srgb,var(--ui-primary) 5%,var(--ui-bg)); box-shadow:inset 3px 0 var(--ui-primary); }
+.appointment-disclosure[data-state="open"] .appointment-summary { background:color-mix(in srgb,var(--ui-primary) 5%,var(--ui-bg)); box-shadow:inset 3px 0 var(--ui-primary); }
 .appointment-summary::-webkit-details-marker { display:none; }
 .appointment-summary:hover { background:var(--ui-bg-elevated); }
 .appointment-summary:focus-visible { outline:2px solid var(--ui-primary); outline-offset:-3px; border-radius:.6rem; }
@@ -365,7 +383,7 @@ async function changeStatus(item: AppointmentRecord, status: Exclude<Appointment
 .compact-time strong { display:block; color:var(--ui-text-highlighted); font-size:.95rem; font-weight:600; font-variant-numeric:tabular-nums; }
 .compact-time > span { display:block; margin-top:.25rem; font-size:.7rem; color:var(--ui-text-muted); }
 .expand-icon { grid-column:4; grid-row:1; width:1rem; height:1rem; color:var(--ui-text-muted); transition:transform .15s; }
-.appointment-card[data-state="open"] .expand-icon { transform:rotate(180deg); }
+.appointment-disclosure[data-state="open"] .expand-icon { transform:rotate(180deg); }
 .appointment-details { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1.5rem; border-top:1px solid var(--ui-border); background:var(--ui-bg); padding:1.5rem 1.25rem; }
 .appointment-detail { display:flex; align-items:flex-start; gap:.6rem; min-width:0; }
 .appointment-detail > div { min-width:0; }
@@ -382,14 +400,22 @@ async function changeStatus(item: AppointmentRecord, status: Exclude<Appointment
 .appointment-actions { display:flex; align-items:center; justify-content:space-between; gap:.75rem; border-top:1px solid var(--ui-border); background:var(--ui-bg-elevated); padding:.85rem 1.25rem; }
 .appointment-actions > p { color:var(--ui-text-muted); font-size:.7rem; }
 .appointment-actions > div { display:flex; flex-wrap:wrap; gap:.5rem; }
+.outcome-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 1.25rem; border-top:1px solid var(--color-brand-200); background:var(--color-brand-50); }
+.outcome-heading { display:flex; align-items:flex-start; gap:.6rem; color:var(--ui-primary); }
+.outcome-symbol { display:grid; width:2rem; height:2rem; flex:0 0 auto; place-items:center; border:1px solid color-mix(in srgb,var(--ui-primary) 18%,transparent); border-radius:.55rem; background:white; }
+.outcome-heading small { display:none; }
+.outcome-heading strong { display:block; font-size:.8rem; font-weight:650; }
+.outcome-heading p > span { display:block; margin-top:.25rem; max-width:24rem; color:var(--ui-text-muted); font-size:.72rem; line-height:1.6; }
+.outcome-buttons { display:flex; flex-wrap:wrap; gap:.5rem; }
 @media(max-width:1100px) {
   .appointment-list { --list-grid:5rem minmax(0,1fr) minmax(0,1fr) 1rem; }
   .appointment-summary,.list-columns { gap:.75rem; padding-inline:1rem; }
 }
 @media(max-width:767px) {
   .list-columns { display:none; }
-  .appointment-list { display:grid; gap:.7rem; border:0; border-radius:0; overflow:visible; }
-  .appointment-card { border:1px solid var(--ui-border); border-radius:.75rem; }
+  .appointment-list { display:grid; gap:1.125rem; border:0; border-radius:0; overflow:visible; }
+  .appointment-card { border:1px solid #cbd6ce; border-radius:.85rem; background:white; box-shadow:0 .2rem .6rem rgb(13 31 26 / .055); }
+  .appointment-summary { background:white; }
   .appointment-summary { grid-template-columns:minmax(0,1fr) auto; gap:.85rem .75rem; padding:1rem; }
   .compact-time { display:flex; align-items:center; gap:.55rem; grid-column:1; grid-row:1; }
   .compact-time strong { font-size:1.15rem; font-weight:650; letter-spacing:-.025em; }
@@ -407,6 +433,33 @@ async function changeStatus(item: AppointmentRecord, status: Exclude<Appointment
   .appointment-details { grid-template-columns:1fr; gap:.85rem; }
   .appointment-actions { align-items:flex-start; flex-direction:column; }
   .appointment-actions > div { width:100%; }
+  .outcome-actions { position:relative; display:block; padding:1.125rem 1rem 1rem; border-top:0; background:linear-gradient(155deg,#fbfcfa 0%,#f3f6f2 100%); }
+  .outcome-actions::before { position:absolute; top:0; left:0; right:0; height:2px; background:#91b5a1; content:''; }
+  .outcome-heading { align-items:center; gap:.75rem; color:var(--color-brand-800); }
+  .outcome-symbol { width:2.5rem; height:2.5rem; border-color:#d5e2d9; border-radius:.7rem; background:#fff; color:var(--color-brand-700); box-shadow:0 .2rem .6rem rgb(13 31 26 / .05); }
+  .outcome-heading small { display:block; margin-bottom:.15rem; color:var(--color-brand-600); font-size:.56rem; font-weight:750; letter-spacing:.11em; text-transform:uppercase; }
+  .outcome-heading strong { font-size:.85rem; letter-spacing:-.01em; }
+  .outcome-heading p > span { margin-top:.2rem; font-size:.72rem; line-height:1.5; }
+  .outcome-buttons { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.55rem; width:100%; margin-top:.9rem; }
+  .outcome-buttons > * { justify-content:center; min-height:2.75rem; border-radius:.65rem; padding-inline:.7rem; white-space:normal; font-size:.8rem; line-height:1.25; }
+  .outcome-buttons { grid-template-columns:1fr; }
+  .outcome-buttons > .outcome-complete,
+  .outcome-buttons > .outcome-no-show,
+  .outcome-buttons > .outcome-cancel { grid-column:auto; width:100%; min-height:2.75rem; margin:0; border:1px solid #ccd7ce; border-radius:999px; background:#fff; color:var(--color-brand-800); padding:.5rem .875rem; font-size:.8rem; font-weight:600; box-shadow:0 .125rem .35rem rgb(13 31 26 / .035); }
+  .outcome-buttons > .outcome-complete { border-color:#a9d5b7; background:#f0faf3; color:#218443; }
+  .outcome-buttons > .outcome-cancel { border-color:#efb4b4; background:#fff5f5; color:#c62828; }
+  .outcome-buttons > .outcome-complete:hover,
+  .outcome-buttons > .outcome-complete:active,
+  .outcome-buttons > .outcome-no-show:hover,
+  .outcome-buttons > .outcome-no-show:active { border-color:#aebfb2; background:#edf3ee; }
+  .outcome-buttons > .outcome-complete:hover,
+  .outcome-buttons > .outcome-complete:active { border-color:#80bd93; background:#e1f4e7; color:#176b34; }
+  .outcome-buttons > .outcome-cancel:hover,
+  .outcome-buttons > .outcome-cancel:active { border-color:#e58d8d; background:#fee8e8; color:#a61b1b; }
+}
+@media(max-width:359px) {
+  .outcome-buttons { grid-template-columns:1fr; }
+  .outcome-cancel { grid-column:1; }
 }
 @media(max-width:639px) {
   .next-topline { padding:1rem 1.1rem; gap:.75rem; }

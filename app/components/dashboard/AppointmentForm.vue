@@ -9,6 +9,7 @@ const saving = ref(false)
 watch(saving, value => emit('savingChange', value), { flush: 'sync' })
 const loadingSlots = ref(false)
 const message = ref('')
+const feedback = useFeedbackToast(message)
 const slots = ref<AvailabilitySlot[]>([])
 let availabilityRequest = 0
 const form = reactive({ serviceId: '', barberId: '', date: '', startsAt: '', customer: { fullName: '', phone: '', email: '' } })
@@ -75,6 +76,7 @@ async function submit() {
       ? { action: 'update', id: props.appointment.id, version: props.appointment.version, ...base }
       : { action: 'create', idempotencyKey: idempotencyKey.value, ...base }
     await $fetch('/api/dashboard/appointments', { method: 'POST', headers: { 'x-toli-request': '1' }, timeout: 20_000, body })
+    feedback.success(props.appointment ? 'Termini u përditësua me sukses.' : 'Termini i ri u shtua me sukses.')
     emit('saved')
   }
   catch (error: unknown) {

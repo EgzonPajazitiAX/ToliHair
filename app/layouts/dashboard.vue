@@ -9,6 +9,7 @@ const open = ref(false)
 const collapsed = ref(false)
 const leaving = ref(false)
 const logoutError = ref('')
+const feedback = useFeedbackToast(logoutError)
 
 const navigationIcons: Record<string, string> = {
   '/dashboard': 'i-lucide-layout-dashboard',
@@ -40,6 +41,7 @@ async function signOut() {
   logoutError.value = ''
   try {
     await logout()
+    feedback.success('Dolët nga llogaria me sukses.')
     await navigateTo('/login', { replace: true })
   }
   catch {

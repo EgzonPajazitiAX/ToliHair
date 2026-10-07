@@ -27,7 +27,7 @@
     "test:appointments:db": "node scripts/test-appointments-db.mjs",
     "test:pricing:db": "node scripts/test-pricing-db.mjs",
     "test:auth": "node --test tests/auth-policy.test.mjs && node tests/auth.integration.mjs",
-    "test:unit": "node --test tests/money.test.mjs tests/booking-client.test.mjs tests/pricing.test.mjs",
+    "test:unit": "node --test tests/money.test.mjs tests/booking-client.test.mjs tests/pricing.test.mjs tests/working-hours-client.test.mjs tests/blocked-times.test.mjs tests/service-order.test.mjs",
     "check:release-env": "node --env-file=.env scripts/check-release-env.mjs",
     "verify:release": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run test:auth"
   },

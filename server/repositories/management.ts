@@ -18,6 +18,16 @@ export async function loadManagement(client: SupabaseClient<Database>): Promise<
 }
 
 export async function saveManagement(client: SupabaseClient<Database>, resource: ManagementResource, data: Json) {
+  if (resource === 'services' && data && typeof data === 'object' && !Array.isArray(data) && data.action === 'reorder') {
+    const result = await client.rpc('reorder_services', { p_order: data.services as Json })
+    if (result.error) managementError(result.error)
+    return { success: true }
+  }
+  if (resource === 'blocked-times' && data && typeof data === 'object' && !Array.isArray(data) && data.all_barbers === true) {
+    const result = await client.rpc('block_all_barbers', { p_start_local: data.start_local as string, p_end_local: data.end_local as string, p_reason: data.reason as string })
+    if (result.error) managementError(result.error)
+    return { success: true }
+  }
   const payload = resource === 'settings' && data && typeof data === 'object' && !Array.isArray(data)
     ? { ...data, timezone: 'Europe/Belgrade', currency: 'EUR' }
     : data

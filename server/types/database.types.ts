@@ -506,6 +506,8 @@ export type Database = {
         }
       }
       manage_shop: { Args: { p_data: Json; p_resource: string }; Returns: Json }
+      reorder_services: { Args: { p_order: Json }; Returns: Json }
+      block_all_barbers: { Args: { p_start_local: string; p_end_local: string; p_reason: string }; Returns: Json }
       get_available_slots: {
         Args: { p_barber?: string; p_date: string; p_service: string }
         Returns: { barber_id: string; barber_name: string; local_time: string; slot_start: string }[]

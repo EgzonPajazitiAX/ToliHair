@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   const parsed = managementSchemas[resource.data].safeParse(input)
   if (!parsed.success) throw createError({ statusCode: 422, statusMessage: 'Kontrolloni vlerat e formularit', data: { issues: parsed.error.issues.map(i => ({ path: i.path.join('.'), message: 'Kjo vlerë nuk është e vlefshme' })) } })
   const result = await saveManagement(sessionClient(event), resource.data, parsed.data)
-  if (resource.data === 'services' || resource.data === 'barbers') {
+  if ((resource.data === 'services' && !('action' in parsed.data)) || resource.data === 'barbers') {
     await synchronizeUniversalBarberServices(createPrivilegedSupabaseClient())
   }
   return result

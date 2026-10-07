@@ -191,7 +191,7 @@ function review() {
 
             <div class="confirmation-shell">
               <div class="confirmation-appointment">
-                <span class="confirmation-icon"><UIcon name="i-lucide-calendar-check" /></span>
+                <span class="confirmation-icon" aria-hidden="true"><UIcon name="i-lucide-calendar-check" class="size-5 shrink-0" /></span>
                 <div class="min-w-0">
                   <p>Termini i zgjedhur</p>
                   <strong>{{ slot ? dateLabel(slot.startsAt) : '' }}</strong>
@@ -203,7 +203,7 @@ function review() {
               <div class="confirmation-grid">
                 <section class="confirmation-card" aria-labelledby="confirmation-services">
                   <div class="confirmation-card-heading">
-                    <span><UIcon name="i-lucide-scissors" /></span>
+                    <span aria-hidden="true"><UIcon name="i-lucide-scissors" class="size-4 shrink-0" /></span>
                     <div><h3 id="confirmation-services">Shërbimet</h3><p>{{ totalDuration }} minuta gjithsej</p></div>
                     <UButton color="neutral" variant="ghost" type="button" :disabled="submitting" @click="step = 3">Ndrysho</UButton>
                   </div>
@@ -214,7 +214,7 @@ function review() {
 
                 <section class="confirmation-card" aria-labelledby="confirmation-customer">
                   <div class="confirmation-card-heading">
-                    <span><UIcon name="i-lucide-user-round" /></span>
+                    <span aria-hidden="true"><UIcon name="i-lucide-user-round" class="size-4 shrink-0" /></span>
                     <div><h3 id="confirmation-customer">Të dhënat e tua</h3><p>Kontakti për rezervimin</p></div>
                     <UButton color="neutral" variant="ghost" type="button" :disabled="submitting" @click="step = 4">Ndrysho</UButton>
                   </div>
@@ -232,7 +232,7 @@ function review() {
               </div>
             </div>
 
-            <div class="confirmation-notice"><UIcon name="i-lucide-clock-check" /><p>Ju lutemi, respektojeni orarin e rezervuar dhe paraqituni në Toli Hair 10 minuta para fillimit të terminit.</p></div>
+            <div class="confirmation-notice"><UIcon name="i-lucide-clock-check" class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" /><p>Ju lutemi, respektojeni orarin e rezervuar dhe paraqituni në Toli Hair 10 minuta para fillimit të terminit.</p></div>
             <UButton class="mt-5 w-full justify-center sm:w-auto" size="xl" icon="i-lucide-calendar-check" :loading="submitting" :disabled="submitting" @click="booking.confirm">Konfirmo rezervimin</UButton>
           </section>
         </div>
@@ -299,23 +299,21 @@ function review() {
 .slot-button { justify-content: center; min-height: 2.75rem; border: 1px solid var(--ui-border); border-radius: .7rem; background: white; font-size: .875rem; font-weight: 700; transition: border-color .15s, background .15s, color .15s, transform .15s; }
 .slot-button:hover { border-color: var(--ui-primary); transform: translateY(-1px); }
 .slot-selected, .slot-selected:hover { border-color: var(--ui-primary); background: var(--ui-primary); color: white; box-shadow: 0 .35rem 1rem color-mix(in srgb, var(--ui-primary) 25%, transparent); }
-.confirmation-shell { margin-top: 1.5rem; overflow: hidden; border: 1px solid var(--ui-border); border-radius: .75rem; background: white; box-shadow: 0 1rem 2.5rem rgb(13 31 26 / .06); }
-.confirmation-appointment { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1rem; background: #12241d; padding: 1.25rem; color: white; }
+.confirmation-shell { margin-top: 1.5rem; }
+.confirmation-appointment { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1rem; border-radius: .65rem; background: #12241d; padding: 1rem; color: white; }
 .confirmation-icon { display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 1px solid rgb(255 255 255 / .14); border-radius: .5rem; background: rgb(255 255 255 / .08); color: #86c4aa; }
-.confirmation-icon svg { width: 1.25rem; height: 1.25rem; }
 .confirmation-appointment p { color: rgb(255 255 255 / .52); font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.confirmation-appointment strong, .confirmation-appointment span { display: block; }
+.confirmation-appointment strong, .confirmation-appointment div > span { display: block; }
 .confirmation-appointment strong { margin-top: .2rem; overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
 .confirmation-appointment div > span { margin-top: .15rem; color: rgb(255 255 255 / .62); font-size: .8rem; }
 .confirmation-appointment button, .confirmation-card-heading button { color: var(--ui-primary); font-size: .75rem; font-weight: 700; }
 .confirmation-appointment button { color: #a9d7c3; }
 .confirmation-appointment button:hover, .confirmation-card-heading button:hover { text-decoration: underline; text-underline-offset: .2rem; }
 .confirmation-grid { display: grid; }
-.confirmation-card { min-width: 0; padding: 1.25rem; }
+.confirmation-card { min-width: 0; padding-block: 1.25rem; }
 .confirmation-card + .confirmation-card { border-top: 1px solid var(--ui-border); }
 .confirmation-card-heading { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .75rem; }
 .confirmation-card-heading > span { display: grid; width: 2.25rem; height: 2.25rem; place-items: center; border-radius: .45rem; background: var(--color-brand-50); color: var(--ui-primary); }
-.confirmation-card-heading svg { width: 1rem; height: 1rem; }
 .confirmation-card-heading h3 { font-size: .9rem; font-weight: 750; }
 .confirmation-card-heading p { margin-top: .1rem; color: var(--ui-text-muted); font-size: .7rem; }
 .confirmation-services, .confirmation-customer { margin-top: 1rem; border-top: 1px solid var(--ui-border); padding-top: .75rem; }
@@ -324,13 +322,12 @@ function review() {
 .confirmation-services strong { white-space: nowrap; }
 .confirmation-customer dt { flex: 0 0 auto; color: var(--ui-text-muted); }
 .confirmation-customer dd { text-align: right; font-weight: 600; }
-.confirmation-total { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--ui-border); background: var(--ui-bg-elevated); padding: 1rem 1.25rem; }
+.confirmation-total { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--ui-border); padding-block: 1rem; }
 .confirmation-total span, .confirmation-total small { display: block; }
 .confirmation-total span { font-size: .82rem; font-weight: 700; }
 .confirmation-total small { margin-top: .15rem; color: var(--ui-text-muted); font-size: .7rem; }
 .confirmation-total > strong { color: var(--ui-primary); font-size: 1.5rem; letter-spacing: -.03em; }
 .confirmation-notice { display: flex; align-items: flex-start; gap: .65rem; margin-top: 1rem; color: var(--ui-text-muted); font-size: .72rem; line-height: 1.6; }
-.confirmation-notice svg { width: 1rem; height: 1rem; margin-top: .15rem; flex: 0 0 auto; color: var(--ui-primary); }
 .summary-row { display: grid; grid-template-columns: minmax(7rem, .7fr) minmax(0, 1.3fr); gap: 1rem; padding-block: 1rem; }
 .summary-row dt { color: var(--ui-text-muted); }
 .summary-row dd { text-align: right; font-weight: 500; }
@@ -347,7 +344,7 @@ function review() {
 .summary-total dd { padding-left: 0; font-size: 1.75rem; letter-spacing: -.04em; }
 .summary-footnote { display: flex; align-items: center; gap: .5rem; margin-top: 1.5rem; border-top: 1px solid rgb(255 255 255 / .1); padding-top: 1rem; color: #b5ddcc; font-size: .7rem; }
 @container (min-width: 620px) { .schedule-picker { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .times-panel { border-top: 0; border-left: 1px solid var(--ui-border); } }
-@container (min-width: 580px) { .confirmation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .confirmation-card + .confirmation-card { border-top: 0; border-left: 1px solid var(--ui-border); } }
+@container (min-width: 580px) { .confirmation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; } .confirmation-card + .confirmation-card { border-top: 0; border-left: 1px solid var(--ui-border); padding-left: 1.25rem; } }
 @media (min-width: 1024px) { .booking-summary { display: block; } }
 @media (max-width: 639px) {
   .booking-page { padding-top: 1rem; }
@@ -372,8 +369,7 @@ function review() {
   .summary-row dd { text-align: left; }
   .confirmation-appointment { gap: .75rem; padding: 1rem; }
   .confirmation-appointment strong { white-space: normal; }
-  .confirmation-card { padding: 1rem; }
-  .confirmation-total { padding-inline: 1rem; }
+  .confirmation-card { padding-block: 1rem; }
   .booking-actions { position: sticky; bottom: .75rem; z-index: 10; margin-inline: -.5rem; border: 1px solid var(--ui-border); border-radius: .65rem; padding: 1rem; background: rgb(255 255 255 / .97); box-shadow: 0 .25rem 1.5rem rgb(13 31 26 / .09); backdrop-filter: blur(1rem); }
 }
 @media (max-width: 359px) {
